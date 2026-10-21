@@ -30,6 +30,8 @@ class EstadoConversa(Enum):
     # Editar comunidade
     EDITAR_NOME = "editar_nome"
     EDITAR_CANDIDATOS = "editar_candidatos"
+    # ALTERADO [21/10/2026]: desvio opcional — seleção por lista (seções/comunidades).
+    EDITAR_LISTA = "editar_lista"
     EDITAR_ESCOLHA = "editar_escolha"
     EDITAR_NOVO_NOME = "editar_novo_nome"
     EDITAR_LINKS = "editar_links"
@@ -77,6 +79,7 @@ ORDEM_POR_ACAO: dict[Acao, list[EstadoConversa]] = {
     Acao.EDITAR: [
         EstadoConversa.EDITAR_NOME,
         EstadoConversa.EDITAR_CANDIDATOS,
+        EstadoConversa.EDITAR_LISTA,
         EstadoConversa.EDITAR_ESCOLHA,
         EstadoConversa.EDITAR_NOVO_NOME,
         EstadoConversa.EDITAR_LINKS,

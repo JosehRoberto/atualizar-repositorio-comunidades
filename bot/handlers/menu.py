@@ -58,6 +58,15 @@ CB_CANCELAR = "aprov_cancelar"
 PADRAO_APROVACAO = f"^({CB_OK}|{CB_EDITAR}|{CB_SECAO}|{CB_CANCELAR})$"
 PADRAO_CANDIDATOS_EDITAR = r"^edit_cand_(\d+)$"
 PADRAO_CANDIDATOS_REMOVER = r"^rem_cand_(\d+)$"
+# ALTERADO [21/10/2026]: seleção por lista (seções/comunidades) no /editar.
+PADRAO_LISTAR = "^edit_listar$"
+PADRAO_SECAO_LISTA = r"^edit_sec_(\d+)$"
+PADRAO_LISTA_PAGINA = r"^edit_lista_pg_(\d+)$"
+PADRAO_LISTA_VOLTAR = "^edit_lista_voltar$"
+PADRAO_LISTA_CANDIDATO = r"^edit_lst_(\d+)$"
+CB_LISTAR = "edit_listar"
+CB_LISTA_VOLTAR = "edit_lista_voltar"
+LIMITE_LISTA = 8
 
 PRONTO = "pronto"
 
@@ -86,6 +95,18 @@ def _autorizado(update: Update) -> bool:
     if not Config.TELEGRAM_ALLOWED_USER_IDS:
         return True
     return user.id in Config.TELEGRAM_ALLOWED_USER_IDS
+
+
+# ALTERADO [21/10/2026]: guarda de edição com publicação pendente
+# (planejamento guarda-publicacao-pendente, R3/R4/R10).
+def _publicacao_pendente() -> str | None:
+    """Mensagem se houver edição não publicada no README; ``None`` se a árvore estiver limpa."""
+    try:
+        if GitService.from_config().readme_pendente(Config.README_PATH):
+            return escrita_service.MENSAGEM_PUBLICACAO_PENDENTE
+    except GitError as erro:
+        return f"⚠️ Não foi possível inspecionar o repositório: {erro}"
+    return None
 
 
 def _chat_id(update: Update) -> int:
@@ -204,6 +225,41 @@ def texto_candidatos(rotulos: list[str], verbo: str) -> str:
     return "\n".join(linhas)
 
 
+# ALTERADO [21/10/2026]: teclados/texto da seleção por lista (seções → comunidades).
+def teclado_secoes(secoes: list[str]) -> InlineKeyboardMarkup:
+    """Teclado com as seções editáveis; o callback carrega o índice da seção."""
+    return InlineKeyboardMarkup(
+        [[InlineKeyboardButton(nome, callback_data=f"edit_sec_{i}")] for i, nome in enumerate(secoes)]
+    )
+
+
+def teclado_lista(rotulos: list[str], pagina: int) -> InlineKeyboardMarkup:
+    """Teclado paginado das comunidades de uma seção (índice absoluto no callback)."""
+    inicio = pagina * LIMITE_LISTA
+    fatia = rotulos[inicio:inicio + LIMITE_LISTA]
+    linhas = [
+        [InlineKeyboardButton(f"{inicio + i + 1}. {rotulo}", callback_data=f"edit_lst_{inicio + i}")]
+        for i, rotulo in enumerate(fatia)
+    ]
+    nav = []
+    if pagina > 0:
+        nav.append(InlineKeyboardButton("⬅️ Anterior", callback_data=f"edit_lista_pg_{pagina - 1}"))
+    if inicio + LIMITE_LISTA < len(rotulos):
+        nav.append(InlineKeyboardButton("➡️ Próxima", callback_data=f"edit_lista_pg_{pagina + 1}"))
+    nav.append(InlineKeyboardButton("↩️ Seções", callback_data=CB_LISTA_VOLTAR))
+    linhas.append(nav)
+    return InlineKeyboardMarkup(linhas)
+
+
+def texto_lista(secao: str, pagina: int, total_paginas: int) -> str:
+    """Mensagem com o cabeçalho da seção e a página atual."""
+    linhas = [
+        f"📋 *{_md(secao)}* — página {pagina + 1}/{total_paginas}",
+        "Selecione a comunidade que deseja editar:",
+    ]
+    return "\n".join(linhas)
+
+
 def texto_preview(conversa, secao: str) -> str:
     """Mensagem de pré-visualização antes de gravar."""
     comunidade = conversa.rascunho
@@ -313,6 +369,10 @@ async def cmd_nova(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Estado
     if not _autorizado(update):
         await update.message.reply_text("⛔ Você não está autorizado a usar este bot.")
         return ConversationHandler.END
+    pendente = _publicacao_pendente()
+    if pendente:
+        await update.message.reply_text(pendente)
+        return ConversationHandler.END
     gerenciador.iniciar(update.effective_user.id, Acao.NOVA)
     await update.message.reply_text(PERGUNTA_NOVA_NOME)
     return EstadoConversa.NOVA_NOME
@@ -375,8 +435,15 @@ async def cmd_editar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Esta
     if not _autorizado(update):
         await update.message.reply_text("⛔ Você não está autorizado a usar este bot.")
         return ConversationHandler.END
+    pendente = _publicacao_pendente()
+    if pendente:
+        await update.message.reply_text(pendente)
+        return ConversationHandler.END
     gerenciador.iniciar(update.effective_user.id, Acao.EDITAR)
-    await update.message.reply_text(PERGUNTA_EDITAR_NOME)
+    teclado = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("📋 Listar comunidades", callback_data=CB_LISTAR)]]
+    )
+    await update.message.reply_text(PERGUNTA_EDITAR_NOME, reply_markup=teclado)
     return EstadoConversa.EDITAR_NOME
 
 
@@ -476,6 +543,114 @@ async def editar_candidato(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     return await _oferecer_edicao(update, conversa, ocorrencia)
 
 
+# ALTERADO [21/10/2026]: /editar híbrido — seleção por lista (seções → comunidades).
+async def _mostrar_lista(update: Update, conversa, rotulos: list[str], pagina: int) -> None:
+    """Envia (ou reenvia) a página da lista de comunidades da seção escolhida."""
+    total_paginas = max(1, (len(rotulos) + LIMITE_LISTA - 1) // LIMITE_LISTA)
+    pagina = max(0, min(pagina, total_paginas - 1))
+    await _mensagem(update).reply_text(
+        texto_lista(conversa.secao_alvo, pagina, total_paginas),
+        parse_mode="Markdown",
+        reply_markup=teclado_lista(rotulos, pagina),
+    )
+
+
+def _ocorrencias_da_secao(doc, secao: str):
+    """Comunidades de uma seção, na ordem do README."""
+    return [oc for oc in doc.comunidades() if oc.secao.nome == secao]
+
+
+async def editar_listar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Abre a lista de seções editáveis (nível 1)."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    doc = carregar_readme(Config.README_PATH)
+    secoes = lista_secoes_editaveis(doc)
+    if not secoes:
+        gerenciador.encerrar(query.from_user.id)
+        await query.message.reply_text("⚠️ Nenhuma seção editável encontrada.")
+        return ConversationHandler.END
+    await query.message.reply_text(
+        "📚 *Escolha a seção:*", parse_mode="Markdown", reply_markup=teclado_secoes(secoes)
+    )
+    return EstadoConversa.EDITAR_LISTA
+
+
+async def editar_lista_secao(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Recebe a seção escolhida e mostra as comunidades dela (nível 2)."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    conversa = gerenciador.obter(query.from_user.id)
+    try:
+        indice = int(query.data.rsplit("_", 1)[1])
+    except (IndexError, ValueError):
+        indice = -1
+    doc = carregar_readme(Config.README_PATH)
+    secoes = lista_secoes_editaveis(doc)
+    if not 0 <= indice < len(secoes):
+        gerenciador.encerrar(query.from_user.id)
+        await query.message.reply_text("⚠️ Seção inválida. Use /editar para recomeçar.")
+        return ConversationHandler.END
+    secao = secoes[indice]
+    ocorrencias = _ocorrencias_da_secao(doc, secao)
+    if not ocorrencias:
+        await query.message.reply_text(
+            f"⚠️ A seção *{_md(secao)}* não tem comunidades.", parse_mode="Markdown"
+        )
+        return EstadoConversa.EDITAR_LISTA
+    conversa.secao_alvo = secao
+    rotulos = _guardar_candidatos(doc, conversa, ocorrencias)
+    await _mostrar_lista(update, conversa, rotulos, pagina=0)
+    return EstadoConversa.EDITAR_CANDIDATOS
+
+
+async def editar_lista_pagina(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Navega entre as páginas da lista de comunidades."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    conversa = gerenciador.obter(query.from_user.id)
+    if not conversa.secao_alvo:
+        gerenciador.encerrar(query.from_user.id)
+        await query.message.reply_text("⚠️ Sessão expirada. Use /editar para recomeçar.")
+        return ConversationHandler.END
+    try:
+        pagina = int(query.data.rsplit("_", 1)[1])
+    except (IndexError, ValueError):
+        pagina = 0
+    doc = carregar_readme(Config.README_PATH)
+    ocorrencias = _ocorrencias_da_secao(doc, conversa.secao_alvo)
+    rotulos = _guardar_candidatos(doc, conversa, ocorrencias)
+    await _mostrar_lista(update, conversa, rotulos, pagina)
+    return EstadoConversa.EDITAR_CANDIDATOS
+
+
+async def editar_lista_voltar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Volta da lista de comunidades para a lista de seções."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    conversa = gerenciador.obter(query.from_user.id)
+    conversa.secao_alvo = None
+    conversa.candidatos = []
+    doc = carregar_readme(Config.README_PATH)
+    secoes = lista_secoes_editaveis(doc)
+    await query.message.reply_text(
+        "📚 *Escolha a seção:*", parse_mode="Markdown", reply_markup=teclado_secoes(secoes)
+    )
+    return EstadoConversa.EDITAR_LISTA
+
+
 async def editar_escolha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
     """Recebe a escolha (nome/links/ambos) e direciona o próximo passo."""
     query = update.callback_query
@@ -528,6 +703,10 @@ async def cmd_remover(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Est
     """Inicia o fluxo de remoção."""
     if not _autorizado(update):
         await update.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    pendente = _publicacao_pendente()
+    if pendente:
+        await update.message.reply_text(pendente)
         return ConversationHandler.END
     gerenciador.iniciar(update.effective_user.id, Acao.REMOVER)
     await update.message.reply_text(PERGUNTA_REMOVER_NOME)
@@ -611,7 +790,17 @@ async def remover_confirmacao(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.message.reply_text(escrita_service.MENSAGEM_OCUPADO)
         return EstadoConversa.REMOVER_CONFIRMACAO
     async with escrita_service.lock_escrita():
-        erro = escrita_service.sincronizar_seguro(GitService.from_config())
+        servico = GitService.from_config()
+        try:
+            if servico.readme_pendente(Config.README_PATH):
+                gerenciador.encerrar(uid)
+                await query.message.reply_text(escrita_service.MENSAGEM_PUBLICACAO_PENDENTE)
+                return ConversationHandler.END
+        except GitError as erro:
+            gerenciador.encerrar(uid)
+            await query.message.reply_text(f"⚠️ Não foi possível inspecionar o repositório: {erro}")
+            return ConversationHandler.END
+        erro = escrita_service.sincronizar_seguro(servico)
         if erro is None:
             erro = escrita_service.conferir_hash(Config.README_PATH, conversa.hash_base)
         if erro is not None:
@@ -718,7 +907,17 @@ async def aprovacao(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Estad
         await query.message.reply_text(escrita_service.MENSAGEM_OCUPADO)
         return EstadoConversa.APROVACAO
     async with escrita_service.lock_escrita():
-        erro = escrita_service.sincronizar_seguro(GitService.from_config())
+        servico = GitService.from_config()
+        try:
+            if servico.readme_pendente(Config.README_PATH):
+                gerenciador.encerrar(uid)
+                await query.message.reply_text(escrita_service.MENSAGEM_PUBLICACAO_PENDENTE)
+                return ConversationHandler.END
+        except GitError as erro:
+            gerenciador.encerrar(uid)
+            await query.message.reply_text(f"⚠️ Não foi possível inspecionar o repositório: {erro}")
+            return ConversationHandler.END
+        erro = escrita_service.sincronizar_seguro(servico)
         if erro is None:
             erro = escrita_service.conferir_hash(Config.README_PATH, conversa.hash_base)
         if erro is not None:
@@ -819,9 +1018,20 @@ def montar_conversation_handler() -> ConversationHandler:
         EstadoConversa.NOVA_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, nova_nome)],
         EstadoConversa.NOVA_LINKS: [MessageHandler(filters.TEXT & ~filters.COMMAND, nova_links)],
         EstadoConversa.NOVA_SECAO: [MessageHandler(filters.TEXT & ~filters.COMMAND, nova_secao)],
-        EstadoConversa.EDITAR_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_nome)],
+        EstadoConversa.EDITAR_NOME: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, editar_nome),
+            CallbackQueryHandler(editar_listar, pattern=PADRAO_LISTAR),
+        ],
         EstadoConversa.EDITAR_CANDIDATOS: [
             CallbackQueryHandler(editar_candidato, pattern=PADRAO_CANDIDATOS_EDITAR),
+            CallbackQueryHandler(editar_candidato, pattern=PADRAO_LISTA_CANDIDATO),
+            CallbackQueryHandler(editar_lista_pagina, pattern=PADRAO_LISTA_PAGINA),
+            CallbackQueryHandler(editar_lista_voltar, pattern=PADRAO_LISTA_VOLTAR),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, editar_nome),
+        ],
+        EstadoConversa.EDITAR_LISTA: [
+            CallbackQueryHandler(editar_lista_secao, pattern=PADRAO_SECAO_LISTA),
+            CallbackQueryHandler(editar_lista_voltar, pattern=PADRAO_LISTA_VOLTAR),
             MessageHandler(filters.TEXT & ~filters.COMMAND, editar_nome),
         ],
         EstadoConversa.EDITAR_ESCOLHA: [CallbackQueryHandler(editar_escolha, pattern="^edit_(nome|links|ambos)$")],

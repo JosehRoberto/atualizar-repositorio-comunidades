@@ -22,6 +22,9 @@ MENSAGEM_OCUPADO = "⏳ Há uma edição em andamento. Aguarde e tente novamente
 MENSAGEM_HASH_MUDOU = (
     "⚠️ O README mudou desde a pré-visualização. Refaça a operação para ver as mudanças."
 )
+MENSAGEM_PUBLICACAO_PENDENTE = (
+    "⚠️ Há alterações não publicadas. Use /publicar ou /restaurar antes de editar."
+)
 
 
 def lock_escrita() -> asyncio.Lock:
@@ -48,6 +51,20 @@ def sincronizar_seguro(servico: GitService) -> str | None:
         servico.sincronizar()
     except GitError as erro:
         return f"⚠️ Não foi possível sincronizar com o remoto: {erro}"
+    return None
+
+
+# ALTERADO [21/10/2026]: sincronização da publicação via rebase (planejamento
+# guarda-publicacao-pendente, R1/R2) — permite publicar com o remoto à frente.
+def sincronizar_publicacao_seguro(servico: GitService) -> str | None:
+    """Sincroniza para publicação (`fetch` + `pull --rebase`).
+
+    Devolve a mensagem de erro (para abortar) ou ``None`` se tudo certo.
+    """
+    try:
+        servico.sincronizar_publicacao()
+    except GitError as erro:
+        return f"⚠️ Não foi possível sincronizar para publicar: {erro}"
     return None
 
 

@@ -144,17 +144,19 @@ async def cmd_publicar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Es
     uid = update.effective_user.id
     gerenciador.iniciar(uid, Acao.PUBLICAR)
     try:
-        alteracoes = GitService.from_config().alteracoes()
+        servico = GitService.from_config()
+        pendentes = [f"commit: {linha}" for linha in servico.commits_pendentes()]
+        pendentes += servico.alteracoes()
     except GitError as erro:
         gerenciador.encerrar(uid)
         await update.message.reply_text(f"⚠️ Não foi possível inspecionar o repositório: {erro}")
         return ConversationHandler.END
-    if not alteracoes:
+    if not pendentes:
         gerenciador.encerrar(uid)
         await update.message.reply_text("✅ Nada a publicar — o repositório está limpo.")
         return ConversationHandler.END
     await update.message.reply_text(
-        texto_publicacao(alteracoes), parse_mode="Markdown", reply_markup=teclado_publicacao()
+        texto_publicacao(pendentes), parse_mode="Markdown", reply_markup=teclado_publicacao()
     )
     return EstadoConversa.PUBLICAR_CONFIRMACAO
 
@@ -175,20 +177,35 @@ async def publicar_confirmacao(update: Update, context: ContextTypes.DEFAULT_TYP
 
     async with escrita_service.lock_escrita():
         servico = GitService.from_config()
+        # ALTERADO [21/10/2026]: commita a edição pendente ANTES de sincronizar; a
+        # sincronização usa rebase para permitir publicar com o remoto à frente
+        # (planejamento guarda-publicacao-pendente, R1/R2).
         try:
-            servico.sincronizar()
-            commit = servico.commit(Config.README_PATH, MENSAGEM_COMMIT)
-            servico.push()
-        except GitError as erro:
+            commit = (
+                servico.commit(Config.README_PATH, MENSAGEM_COMMIT)
+                if servico.readme_pendente(Config.README_PATH)
+                else None
+            )
+            erro = escrita_service.sincronizar_publicacao_seguro(servico)
+            if erro is None:
+                servico.push()
+        except GitError as erro_git:
             gerenciador.encerrar(uid)
-            await query.message.reply_text(f"⚠️ Falha ao publicar: {erro}")
+            await query.message.reply_text(f"⚠️ Falha ao publicar: {erro_git}")
+            return ConversationHandler.END
+        if erro is not None:
+            gerenciador.encerrar(uid)
+            await query.message.reply_text(erro)
             return ConversationHandler.END
         historico_service.registrar(
             _historico_path(),
             historico_service.RegistroHistorico(acao="publicar", usuario_id=uid, commit=commit),
         )
     gerenciador.encerrar(uid)
-    await query.message.reply_text(f"✅ Publicado. Commit `{commit[:8]}`.", parse_mode="Markdown")
+    if commit:
+        await query.message.reply_text(f"✅ Publicado. Commit `{commit[:8]}`.", parse_mode="Markdown")
+    else:
+        await query.message.reply_text("✅ Publicado.")
     return ConversationHandler.END
 
 
@@ -251,17 +268,26 @@ async def restaurar_confirmacao(update: Update, context: ContextTypes.DEFAULT_TY
         await query.message.reply_text("⚠️ Backup não encontrado — refaça a seleção.")
         return ConversationHandler.END
 
-    pre = backup_service.restaurar_backup(backup, Config.README_PATH, Config.BACKUP_DIR)
-    historico_service.registrar(
-        _historico_path(),
-        historico_service.RegistroHistorico(
-            acao="restaurar", usuario_id=uid, backup_path=str(backup)
-        ),
-    )
+    # ALTERADO [21/10/2026]: restauração serializada com a escrita/publicação
+    # (planejamento guarda-publicacao-pendente, R11).
+    if escrita_service.ocupado():
+        await query.message.reply_text(escrita_service.MENSAGEM_OCUPADO)
+        return EstadoConversa.RESTAURAR_CONFIRMACAO
+
+    async with escrita_service.lock_escrita():
+        pre = backup_service.restaurar_backup(backup, Config.README_PATH, Config.BACKUP_DIR)
+        historico_service.registrar(
+            _historico_path(),
+            historico_service.RegistroHistorico(
+                acao="restaurar", usuario_id=uid, backup_path=str(backup)
+            ),
+        )
     gerenciador.encerrar(uid)
     extra = f" Backup do estado anterior: `{pre.name}`." if pre else ""
     await query.message.reply_text(
-        f"✅ README restaurado de `{backup.name}`.{extra}", parse_mode="Markdown"
+        f"✅ README restaurado de `{backup.name}`.{extra}\n\n"
+        "💡 Se houver alterações locais, use /publicar para enviá-las.",
+        parse_mode="Markdown",
     )
     return ConversationHandler.END
 

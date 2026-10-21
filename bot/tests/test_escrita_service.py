@@ -19,6 +19,17 @@ class FakeGit:
         self.sincronizou = True
 
 
+class FakeGitPublicacao:
+    def __init__(self, erro=None):
+        self._erro = erro
+        self.sincronizou_pub = False
+
+    def sincronizar_publicacao(self):
+        if self._erro:
+            raise self._erro
+        self.sincronizou_pub = True
+
+
 class TestHash:
     def test_hash_atual(self, tmp_path):
         arquivo = tmp_path / "README.md"
@@ -56,6 +67,23 @@ class TestSincronizacao:
         mensagem = escrita_service.sincronizar_seguro(FakeGit(erro=GitError("conflito")))
         assert "sincronizar" in mensagem
         assert "conflito" in mensagem
+
+
+class TestSincronizacaoPublicacao:
+    def test_ok(self):
+        servico = FakeGitPublicacao()
+        assert escrita_service.sincronizar_publicacao_seguro(servico) is None
+        assert servico.sincronizou_pub is True
+
+    def test_erro_vira_mensagem(self):
+        mensagem = escrita_service.sincronizar_publicacao_seguro(
+            FakeGitPublicacao(erro=GitError("conflito"))
+        )
+        assert "publicar" in mensagem
+        assert "conflito" in mensagem
+
+    def test_mensagem_pendente_existe(self):
+        assert "não publicadas" in escrita_service.MENSAGEM_PUBLICACAO_PENDENTE
 
 
 class TestLock:

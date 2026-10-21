@@ -14,7 +14,7 @@ from telegram.ext import ConversationHandler
 from bot.config import Config
 from bot.handlers import publicacao
 from bot.handlers.state_manager import Acao, EstadoConversa, gerenciador
-from bot.services import historico_service
+from bot.services import escrita_service, historico_service
 
 
 @pytest.fixture(autouse=True)
@@ -82,10 +82,12 @@ def callback_update(data, uid=1):
 
 
 class FakeGit:
-    def __init__(self, alteracoes=(), commit_hash="abc12345", erro=None):
+    def __init__(self, alteracoes=(), commits=(), commit_hash="abc12345", erro=None, pendente=False):
         self._alteracoes = list(alteracoes)
+        self._commits = list(commits)
         self._commit_hash = commit_hash
         self._erro = erro
+        self._pendente = pendente
         self.chamadas = []
 
     def alteracoes(self):
@@ -93,8 +95,21 @@ class FakeGit:
             raise self._erro
         return self._alteracoes
 
+    def commits_pendentes(self):
+        if self._erro:
+            raise self._erro
+        return self._commits
+
+    def readme_pendente(self, caminho=None):
+        if self._erro:
+            raise self._erro
+        return self._pendente or bool(self._alteracoes)
+
     def sincronizar(self):
         self.chamadas.append("sincronizar")
+
+    def sincronizar_publicacao(self):
+        self.chamadas.append("sincronizar_publicacao")
 
     def commit(self, arquivo, mensagem):
         self.chamadas.append("commit")
@@ -204,15 +219,59 @@ class TestPublicar:
 
     @pytest.mark.asyncio
     async def test_confirmar(self, ambiente, monkeypatch):
-        fake = FakeGit()
+        fake = FakeGit(pendente=True)
         usar_git(monkeypatch, fake)
         update = callback_update(publicacao.CB_PUB_OK)
         estado = await publicacao.publicar_confirmacao(update, FakeContext())
         assert estado == ConversationHandler.END
-        assert fake.chamadas == ["sincronizar", "commit", "push"]
+        assert fake.chamadas == ["commit", "sincronizar_publicacao", "push"]
         registros = historico_service.ler_historico(publicacao._historico_path())
         assert registros[-1].acao == "publicar"
         assert registros[-1].commit == "abc12345"
+
+    @pytest.mark.asyncio
+    async def test_confirmar_commits_a_frente_sem_sujidade(self, ambiente, monkeypatch):
+        # R1: há commits à frente (push anterior falhou) mas a árvore está limpa.
+        fake = FakeGit(commits=["abc1234 chore: msg"], pendente=False)
+        usar_git(monkeypatch, fake)
+        update = callback_update(publicacao.CB_PUB_OK)
+        estado = await publicacao.publicar_confirmacao(update, FakeContext())
+        assert estado == ConversationHandler.END
+        assert fake.chamadas == ["sincronizar_publicacao", "push"]
+
+    @pytest.mark.asyncio
+    async def test_publicar_com_dirty_detecta_pendencia(self, ambiente, monkeypatch):
+        # cmd_publicar considera commits à frente + arquivos sujos.
+        usar_git(monkeypatch, FakeGit(alteracoes=[" M README.md"], commits=["abc commit"]))
+        update = FakeUpdate(uid=1)
+        estado = await publicacao.cmd_publicar(update, FakeContext())
+        assert estado is EstadoConversa.PUBLICAR_CONFIRMACAO
+        texto, _ = update.message.sent[-1]
+        assert "commit: abc commit" in texto
+
+    @pytest.mark.asyncio
+    async def test_publicar_bloqueado_por_lock(self, ambiente, monkeypatch):
+        # R11: restauração/publicação serializadas.
+        usar_git(monkeypatch, FakeGit(alteracoes=[" M README.md"]))
+        update = callback_update(publicacao.CB_PUB_OK)
+        async with escrita_service.lock_escrita():
+            estado = await publicacao.publicar_confirmacao(update, FakeContext())
+        assert estado is EstadoConversa.PUBLICAR_CONFIRMACAO
+
+    @pytest.mark.asyncio
+    async def test_restaurar_bloqueado_por_lock(self, ambiente):
+        # R11: restaurar recusa quando há edição em andamento.
+        backup = criar_backup(ambiente, "README_20260101_000001.bak", conteudo="# antigo\n")
+        gerenciador.obter(1).backup_escolhido = str(backup)
+        update = callback_update(publicacao.CB_REST_OK)
+        async with escrita_service.lock_escrita():
+            estado = await publicacao.restaurar_confirmacao(update, FakeContext())
+        assert estado is EstadoConversa.RESTAURAR_CONFIRMACAO
+        assert any(
+            escrita_service.MENSAGEM_OCUPADO in t
+            for t, _ in update.callback_query.message.sent
+        )
+        assert not list(ambiente.backup_dir.glob("README_pre-restauracao_*.bak"))
 
 
 class TestRestaurar:

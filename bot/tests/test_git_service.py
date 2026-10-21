@@ -131,6 +131,54 @@ class TestExecucaoGit:
         assert run.call_args[0][0] == ["git", "checkout", "-b", "feat/x"]
 
 
+class TestReadmeCommitsRebase:
+    def test_readme_pendente_true_restrito_ao_arquivo(self, service):
+        with mock.patch(
+            "bot.services.git_service.subprocess.run", return_value=_ok(" M README.md\n")
+        ) as run:
+            assert service.readme_pendente("README.md") is True
+        assert run.call_args[0][0] == ["git", "status", "--porcelain", "--", "README.md"]
+
+    def test_readme_pendente_false(self, service):
+        with mock.patch("bot.services.git_service.subprocess.run", return_value=_ok("")):
+            assert service.readme_pendente(Path(service.repo_dir) / "README.md") is False
+
+    def test_commits_pendentes(self, service):
+        with mock.patch(
+            "bot.services.git_service.subprocess.run",
+            return_value=_ok("abc123 chore: x\ndef456 chore: y\n"),
+        ):
+            assert service.commits_pendentes() == ["abc123 chore: x", "def456 chore: y"]
+
+    def test_commits_pendentes_vazio(self, service):
+        with mock.patch("bot.services.git_service.subprocess.run", return_value=_ok("")):
+            assert service.commits_pendentes() == []
+
+    def test_sincronizar_publicacao_fetch_e_rebase(self, service):
+        with mock.patch.object(service, "fetch") as fetch, mock.patch.object(
+            service, "pull_rebase"
+        ) as rebase:
+            service.sincronizar_publicacao()
+        fetch.assert_called_once()
+        rebase.assert_called_once()
+
+    def test_pull_rebase_usa_flag(self, service):
+        with mock.patch("bot.services.git_service.subprocess.run", return_value=_ok()) as run:
+            service.pull_rebase()
+        assert run.call_args[0][0] == ["git", "pull", "--rebase"]
+
+    def test_pull_rebase_aborta_em_conflito(self, service):
+        erro = subprocess.CalledProcessError(returncode=1, cmd=["git"], stderr="conflito")
+        with mock.patch(
+            "bot.services.git_service.subprocess.run", side_effect=[erro, _ok()]
+        ) as run:
+            with pytest.raises(GitError):
+                service.pull_rebase()
+        chamadas = [c[0][0] for c in run.call_args_list]
+        assert chamadas[0] == ["git", "pull", "--rebase"]
+        assert chamadas[1] == ["git", "rebase", "--abort"]
+
+
 class TestCommit:
     def test_commit_retorna_hash(self, service, tmp_path):
         with mock.patch("bot.services.git_service.subprocess.run", return_value=_ok("deadbeef\n")) as run:

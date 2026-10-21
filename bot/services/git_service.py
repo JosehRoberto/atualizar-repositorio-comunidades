@@ -129,6 +129,23 @@ class GitService:
         saida = self._git("status", "--porcelain").stdout
         return [linha for linha in saida.splitlines() if linha.strip()]
 
+    # ALTERADO [21/10/2026]: pendência restrita ao README e commits à frente (planejamento
+    # guarda-publicacao-pendente, R10/R1). Não altera a semântica de status_limpo/alteracoes.
+    def readme_pendente(self, caminho: str | Path | None = None) -> bool:
+        """True se o README (alvo) tem alterações não commitadas.
+
+        Restringe o `git status` ao arquivo alvo, para que arquivos alheios
+        (untracked/não-README) não indiquem publicação pendente (R10).
+        """
+        alvo = self._relativo(caminho) if caminho is not None else "README.md"
+        saida = self._git("status", "--porcelain", "--", alvo).stdout
+        return bool(saida.strip())
+
+    def commits_pendentes(self) -> list[str]:
+        """Linhas (`--oneline`) dos commits locais à frente de `origin/<branch>`."""
+        saida = self._git("log", "--oneline", f"origin/{self.branch}..HEAD").stdout
+        return [linha for linha in saida.splitlines() if linha.strip()]
+
     def fetch(self) -> None:
         """Busca atualizações do remoto (sem alterar a árvore)."""
         self._git("fetch", "origin")
@@ -141,6 +158,27 @@ class GitService:
         """`fetch` + `pull --ff-only` antes de qualquer edição (§2.12)."""
         self.fetch()
         self.pull_ff_only()
+
+    # ALTERADO [21/10/2026]: sincronização da publicação via rebase (planejamento
+    # guarda-publicacao-pendente, R1/R2). A gravação segue com `pull --ff-only`.
+    def pull_rebase(self) -> None:
+        """`pull --rebase`: reaplica os commits locais sobre o remoto.
+
+        Em conflito, aborta o rebase (preserva os commits locais) e propaga o erro (R2).
+        """
+        try:
+            self._git("pull", "--rebase")
+        except GitError:
+            try:
+                self._git("rebase", "--abort")
+            except GitError:
+                pass
+            raise
+
+    def sincronizar_publicacao(self) -> None:
+        """`fetch` + `pull --rebase` antes do push (§2.12)."""
+        self.fetch()
+        self.pull_rebase()
 
     def criar_branch(self, nome: str) -> None:
         """Cria e muda para uma nova branch."""

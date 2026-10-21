@@ -17,8 +17,11 @@ from bot.handlers import menu
 from bot.handlers.menu import (
     CB_CANCELAR,
     CB_EDITAR,
+    CB_LISTAR,
+    CB_LISTA_VOLTAR,
     CB_OK,
     CB_SECAO,
+    LIMITE_LISTA,
     aplicar_no_doc,
     lista_secoes_editaveis,
     parse_links,
@@ -26,7 +29,10 @@ from bot.handlers.menu import (
     resolver_secao,
     teclado_aprovacao,
     teclado_candidatos,
+    teclado_lista,
+    teclado_secoes,
     texto_candidatos,
+    texto_lista,
     texto_lista_secoes,
     texto_preview,
     texto_resumo_comunidade,
@@ -327,6 +333,15 @@ def _update_texto(texto, uid=1):
 
 
 class FakeGit:
+    def __init__(self, pendente=False, erro=None):
+        self._pendente = pendente
+        self._erro = erro
+
+    def readme_pendente(self, caminho=None):
+        if self._erro:
+            raise self._erro
+        return self._pendente
+
     def sincronizar(self):
         pass
 
@@ -370,6 +385,58 @@ class TestAprovacaoSeguranca:
         assert estado is EstadoConversa.APROVACAO
         assert any(
             escrita_service.MENSAGEM_OCUPADO in t for t, _ in update.callback_query.message.sent
+        )
+
+
+class TestGuardaPublicacaoPendente:
+    @pytest.mark.parametrize("comando", ["cmd_nova", "cmd_editar", "cmd_remover"])
+    @pytest.mark.asyncio
+    async def test_bloqueia_entrada_com_pendencia(self, ambiente_menu, monkeypatch, comando):
+        monkeypatch.setattr(
+            menu.GitService, "from_config", staticmethod(lambda: FakeGit(pendente=True))
+        )
+        update = _update_texto("x")
+        estado = await getattr(menu, comando)(update, FakeContext())
+        assert estado == ConversationHandler.END
+        assert any(
+            escrita_service.MENSAGEM_PUBLICACAO_PENDENTE in t for t, _ in update.message.sent
+        )
+
+    @pytest.mark.asyncio
+    async def test_permite_entrada_quando_limpo(self, ambiente_menu, monkeypatch):
+        monkeypatch.setattr(
+            menu.GitService, "from_config", staticmethod(lambda: FakeGit(pendente=False))
+        )
+        update = _update_texto("x")
+        estado = await menu.cmd_nova(update, FakeContext())
+        assert estado is EstadoConversa.NOVA_NOME
+
+    @pytest.mark.asyncio
+    async def test_erro_git_na_inspecao_bloqueia(self, ambiente_menu, monkeypatch):
+        monkeypatch.setattr(
+            menu.GitService,
+            "from_config",
+            staticmethod(lambda: FakeGit(erro=menu.GitError("sem repo"))),
+        )
+        update = _update_texto("x")
+        estado = await menu.cmd_nova(update, FakeContext())
+        assert estado == ConversationHandler.END
+        assert any("inspecionar o repositório" in t for t, _ in update.message.sent)
+
+    @pytest.mark.asyncio
+    async def test_reforco_na_aprovacao(self, ambiente_menu, monkeypatch):
+        monkeypatch.setattr(
+            menu.GitService, "from_config", staticmethod(lambda: FakeGit(pendente=True))
+        )
+        gerenciador.iniciar(
+            1, Acao.NOVA, rascunho=Comunidade("GruPy Pará", [Link("Site", "https://grupy.pa")])
+        )
+        update = FakeUpdate(CB_OK)
+        estado = await menu.aprovacao(update, FakeContext())
+        assert estado == ConversationHandler.END
+        assert any(
+            escrita_service.MENSAGEM_PUBLICACAO_PENDENTE in t
+            for t, _ in update.callback_query.message.sent
         )
 
 
@@ -489,3 +556,163 @@ class TestEscapeMarkdown:
         assert "GruPy_Pará" in conteudo
         assert "\\" not in conteudo
         assert "GruPy\\_Pará" in resumo
+
+
+# ---------------------------------------------------------------------------
+# /editar híbrido — seleção por lista (seções → comunidades)
+# ---------------------------------------------------------------------------
+
+README_LISTA_FIXTURE = (
+    "# 💻 Comunidades\n\n---\n\n"
+    '<a name="linguagens"></a>\n## 💻 Linguagens\n\n'
+    "| Comunidade | Links |\n|---|---|\n"
+    + "".join(
+        f'| **Com{i:02d}** | <a href="https://x.com/{i}" title="Site"><img src="x" alt="Site"/></a> |\n'
+        for i in range(1, 13)
+    )
+)
+
+
+@pytest.fixture
+def ambiente_lista(tmp_path, monkeypatch):
+    readme = tmp_path / "repositorio" / "README.md"
+    readme.parent.mkdir(parents=True)
+    readme.write_text(README_LISTA_FIXTURE, encoding="utf-8")
+    backup_dir = tmp_path / "backup"
+    backup_dir.mkdir()
+    monkeypatch.setattr(Config, "README_PATH", readme)
+    monkeypatch.setattr(Config, "BACKUP_DIR", backup_dir)
+    monkeypatch.setattr(Config, "TELEGRAM_ALLOWED_USER_IDS", [1])
+    gerenciador.conversas.clear()
+    yield readme
+    gerenciador.conversas.clear()
+
+
+def _callbacks(markup) -> list[str]:
+    return [b.callback_data for linha in markup.inline_keyboard for b in linha]
+
+
+class TestListaBotoes:
+    def test_teclado_secoes(self):
+        kb = teclado_secoes(["Linguagens", "Mulheres"])
+        assert _callbacks(kb) == ["edit_sec_0", "edit_sec_1"]
+
+    def test_teclado_lista_primeira_pagina(self):
+        rotulos = [f"c{i}" for i in range(12)]
+        cbs = _callbacks(teclado_lista(rotulos, 0))
+        assert cbs[:LIMITE_LISTA] == [f"edit_lst_{i}" for i in range(LIMITE_LISTA)]
+        assert "edit_lista_pg_1" in cbs
+        assert "edit_lista_pg_-1" not in cbs
+        assert CB_LISTA_VOLTAR in cbs
+
+    def test_teclado_lista_ultima_pagina(self):
+        rotulos = [f"c{i}" for i in range(12)]
+        cbs = _callbacks(teclado_lista(rotulos, 1))
+        assert [c for c in cbs if c.startswith("edit_lst_")] == [
+            f"edit_lst_{i}" for i in range(LIMITE_LISTA, 12)
+        ]
+        assert "edit_lista_pg_0" in cbs
+        assert "edit_lista_pg_2" not in cbs
+
+    def test_teclado_lista_pagina_unica(self):
+        cbs = _callbacks(teclado_lista(["a", "b", "c"], 0))
+        assert [c for c in cbs if c.startswith("edit_lst_")] == ["edit_lst_0", "edit_lst_1", "edit_lst_2"]
+        assert "edit_lista_pg_1" not in cbs and "edit_lista_pg_-1" not in cbs
+        assert CB_LISTA_VOLTAR in cbs
+
+    def test_callback_data_curto(self):
+        rotulos = [f"comunidade muito longa {i}" for i in range(70)]
+        kb = teclado_lista(rotulos, 5)
+        assert all(len(b.callback_data.encode()) <= 64 for linha in kb.inline_keyboard for b in linha)
+
+    def test_texto_lista(self):
+        texto = texto_lista("Linguagens", 0, 2)
+        assert "Linguagens" in texto
+        assert "1/2" in texto
+
+
+class TestListaHandlers:
+    @pytest.mark.asyncio
+    async def test_editar_listar_mostra_secoes(self, ambiente_lista):
+        gerenciador.iniciar(1, Acao.EDITAR)
+        update = FakeUpdate(CB_LISTAR)
+        estado = await menu.editar_listar(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_LISTA
+        _, kwargs = update.callback_query.message.sent[-1]
+        assert _callbacks(kwargs["reply_markup"]) == ["edit_sec_0"]
+
+    @pytest.mark.asyncio
+    async def test_editar_lista_secao_pagina_e_candidatos(self, ambiente_lista):
+        gerenciador.iniciar(1, Acao.EDITAR)
+        update = FakeUpdate("edit_sec_0")
+        estado = await menu.editar_lista_secao(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_CANDIDATOS
+        conversa = gerenciador.obter(1)
+        assert conversa.secao_alvo == "Linguagens"
+        assert len(conversa.candidatos) == 12
+        _, kwargs = update.callback_query.message.sent[-1]
+        cbs = _callbacks(kwargs["reply_markup"])
+        assert "edit_lst_0" in cbs and "edit_lista_pg_1" in cbs
+
+    @pytest.mark.asyncio
+    async def test_paginacao(self, ambiente_lista):
+        gerenciador.iniciar(1, Acao.EDITAR)
+        await menu.editar_lista_secao(FakeUpdate("edit_sec_0"), FakeContext())
+        update = FakeUpdate("edit_lista_pg_1")
+        estado = await menu.editar_lista_pagina(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_CANDIDATOS
+        _, kwargs = update.callback_query.message.sent[-1]
+        cbs = _callbacks(kwargs["reply_markup"])
+        assert "edit_lst_8" in cbs and "edit_lista_pg_0" in cbs
+
+    @pytest.mark.asyncio
+    async def test_selecao_via_lista_oferece_edicao(self, ambiente_lista):
+        gerenciador.iniciar(1, Acao.EDITAR)
+        await menu.editar_lista_secao(FakeUpdate("edit_sec_0"), FakeContext())
+        update = FakeUpdate("edit_lst_8")
+        estado = await menu.editar_candidato(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_ESCOLHA
+        texto, _ = update.callback_query.message.sent[-1]
+        assert "Com09" in texto
+
+    @pytest.mark.asyncio
+    async def test_voltar_para_secoes(self, ambiente_lista):
+        gerenciador.iniciar(1, Acao.EDITAR)
+        await menu.editar_lista_secao(FakeUpdate("edit_sec_0"), FakeContext())
+        update = FakeUpdate(CB_LISTA_VOLTAR)
+        estado = await menu.editar_lista_voltar(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_LISTA
+        assert gerenciador.obter(1).candidatos == []
+
+    @pytest.mark.asyncio
+    async def test_secao_invalida(self, ambiente_lista):
+        gerenciador.iniciar(1, Acao.EDITAR)
+        update = FakeUpdate("edit_sec_9")
+        estado = await menu.editar_lista_secao(update, FakeContext())
+        assert estado == ConversationHandler.END
+
+    @pytest.mark.asyncio
+    async def test_nao_autorizado(self, ambiente_lista):
+        update = FakeUpdate("edit_sec_0", uid=2)
+        estado = await menu.editar_lista_secao(update, FakeContext())
+        assert estado == ConversationHandler.END
+        assert any("autorizado" in t for t, _ in update.callback_query.message.sent)
+
+    @pytest.mark.asyncio
+    async def test_indice_invalido_sem_sessao(self, ambiente_menu):
+        gerenciador.iniciar(1, Acao.EDITAR)
+        update = FakeUpdate("edit_lst_0")
+        estado = await menu.editar_candidato(update, FakeContext())
+        assert estado == ConversationHandler.END
+        assert any("inválido" in t for t, _ in update.callback_query.message.sent)
+
+    @pytest.mark.asyncio
+    async def test_cmd_editar_tem_botao(self, ambiente_menu, monkeypatch):
+        monkeypatch.setattr(
+            menu.GitService, "from_config", staticmethod(lambda: FakeGit(pendente=False))
+        )
+        update = _update_texto("x")
+        estado = await menu.cmd_editar(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_NOME
+        _, kwargs = update.message.sent[-1]
+        assert _callbacks(kwargs["reply_markup"]) == [CB_LISTAR]
