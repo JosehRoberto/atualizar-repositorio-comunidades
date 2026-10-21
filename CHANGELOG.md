@@ -5,6 +5,13 @@
 
 ## [Unreleased]
 
+### Documentação (21/10/2026) — Nomes do bot e da unit systemd padronizados
+
+- **Alterado:** `docs/requisitos.md §2.15` — username `@atualizar_repositorio_bot` e unit
+  `atualizar-repositorio-bot.service`; `AGENTS.md` (§13) e `README.md` passam a usar o nome concreto
+  da unit (fim do placeholder `<nome>-bot.service`).
+- **Arquivos:** `docs/requisitos.md`, `AGENTS.md`, `README.md`.
+
 ### Documentação (21/10/2026) — Handoff reflete o bot operacional
 
 - **Alterado:** `docs/nova-sessao.md` — `bot/.env` completo e validado, bot operacional (smoke test),

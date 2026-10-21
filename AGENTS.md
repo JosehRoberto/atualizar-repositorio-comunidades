@@ -274,12 +274,12 @@ do usuário no Telegram**. Nunca executar sozinho.
 
 - Produção: Desktop (`roberto-minipc`) via systemd, a partir de
   `/home/roberto/projetos/atualizar-repositorio-comunidades`, com venv dedicada.
-- Unit previsto: `bot/<nome>-bot.service` (`ExecStart=.venv/bin/python -m bot.main`).
+- Unit previsto: `bot/atualizar-repositorio-bot.service` (`ExecStart=.venv/bin/python -m bot.main`).
 - Aplicar alteração = reiniciar o serviço (o commit **não** faz deploy):
 ```bash
-sudo systemctl restart <nome>-bot.service && sleep 3
-sudo systemctl status <nome>-bot.service
-sudo journalctl -u <nome>-bot.service -n 30 --no-pager
+sudo systemctl restart atualizar-repositorio-bot.service && sleep 3
+sudo systemctl status atualizar-repositorio-bot.service
+sudo journalctl -u atualizar-repositorio-bot.service -n 30 --no-pager
 ```
 - Manter **instância única** (duas instâncias causam `409 Conflict` no `getUpdates`).
 

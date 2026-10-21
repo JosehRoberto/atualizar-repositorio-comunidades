@@ -74,9 +74,9 @@ pytest bot/tests/ --cov=bot --cov-report=term-missing
 ## Deploy (systemd)
 
 ```bash
-sudo systemctl restart <nome>-bot.service && sleep 3
-sudo systemctl status <nome>-bot.service
-sudo journalctl -u <nome>-bot.service -n 30 --no-pager
+sudo systemctl restart atualizar-repositorio-bot.service && sleep 3
+sudo systemctl status atualizar-repositorio-bot.service
+sudo journalctl -u atualizar-repositorio-bot.service -n 30 --no-pager
 ```
 
 Mantenha **instância única** (duas instâncias causam `409 Conflict` no `getUpdates`).

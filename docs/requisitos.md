@@ -203,8 +203,9 @@ Solução proposta:
 - Toda a documentação, mensagens do bot e comentários em **português do Brasil (pt-BR)**.
 
 ### 2.15 Nome do bot (item 15)
-- Nome adotado: **`repositorio-comunidades-bot`** (mais descritivo do domínio). Diretório do código
-  permanece `bot/`. (Alternativas aceitas: `comunidades-bot`, `atualizar-comunidades-bot`.)
+- **Username no Telegram:** `@atualizar_repositorio_bot` (bot já criado).
+- **Unit systemd:** `atualizar-repositorio-bot.service`.
+- Diretório do código permanece `bot/`.
 
 ### 2.16 Fuso horário (item 15, repetido)
 - `America/Belem`, usado nos timestamps de backup e de histórico.
