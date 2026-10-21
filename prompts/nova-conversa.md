@@ -44,7 +44,7 @@ formatação Markdown existentes, com backup, preview, aprovação explícita e 
 | Versão | `v0.2.1` (tag anotada) |
 | Python | Python 3.12 |
 | Biblioteca | `python-telegram-bot` 22.8 (v20+) |
-| Testes | **235** herméticos |
+| Testes | **258** herméticos |
 
 **Escopo do cadastro (schema real do README):**
 - Cada comunidade tem **apenas `nome` + `links`** (`| Comunidade | Links |`) — sem cidade,
@@ -99,13 +99,15 @@ atualizar-repositorio-comunidades/
 │   │   ├── tempo.py                    ← fuso `America/Belem` (timestamp)
 │   │   ├── git_service.py             ← fetch/pull/commit/branch/push/MR via `GITLAB_TOKEN`
 │   │   ├── validacao_service.py       ← validações §2.8 + `🧩 Validar README`
+│   │   ├── busca_service.py            ← match exato/fuzzy + candidatos (§2.10)
 │   │   └── escrita_service.py         ← `asyncio.Lock` + sync + recheck de hash (§2.12)
 │   ├── history/                        ← `historico.jsonl` (não versionado)
-│   └── tests/                          ← pytest (235 testes herméticos)
+│   └── tests/                          ← pytest (258 testes herméticos)
 │       ├── conftest.py
 │       ├── test_config.py, test_models.py, test_schemas.py
 │       ├── test_readme_service.py, test_backup_service.py, test_historico_service.py
-│       ├── test_validacao_service.py, test_git_service.py, test_escrita_service.py
+│       ├── test_validacao_service.py, test_busca_service.py, test_git_service.py,
+│       │   test_escrita_service.py
 │       └── test_state_manager.py, test_menu.py, test_publicacao.py
 ├── repositorio/                        ← clone do repositório alvo (GitLab) — ignorado no git
 │   ├── README.md                       ← alvo das edições do bot (fonte da verdade)
@@ -151,6 +153,9 @@ atualizar-repositorio-comunidades/
   - Validações (`validacao_service`): campos obrigatórios, URLs válidas, duplicidade de nome/URL,
     seção editável e `🧩 Validar README` (integridade de tabelas, âncoras × seções, duplicidades,
     URLs inválidas e coerência do marcador) + `comparar_estrutura` (edição cirúrgica).
+  - Busca fuzzy (`busca_service`): match exato → similaridade (`difflib`, limiar `0,6`) com até 5
+    candidatos ranqueados, desempate por URL em nomes homônimos; `/buscar` lista em texto e
+    `/editar`/`/remover` oferecem botões numerados (candidato único é selecionado direto).
   - Escrita concorrente (`escrita_service`): `asyncio.Lock` global, `sincronizar_seguro`
     (`fetch` + `pull --ff-only`; aborta em conflito) e `conferir_hash` antes de gravar.
 - **Fluxo conversacional** (`state_manager` + `menu`): nova/editar/remover/buscar com **preview** e
@@ -172,9 +177,6 @@ atualizar-repositorio-comunidades/
 - **Deploy (nota operacional):** unit systemd instalada e ativa (`enabled`/`active`, instância única);
   após alterações no código, efetivar com `sudo systemctl restart atualizar-repositorio-bot.service`
   (ver §6.1/§13).
-- **Busca fuzzy (§2.10)**: hoje `buscar`/`editar`/`remover` usam match exato pela chave normalizada
-  com fallback por substring (`menu.buscar_nome`); evolução prevista: fuzzy (`rapidfuzz`/`difflib`) +
-  lista numerada de candidatos.
 - **Criação de novas seções pelo bot (§2.6)**: hoje o fluxo insere em seções existentes; criar seção
   nova (âncora + título + tabela + atualização da "Navegação Rápida") ainda não está implementado.
 - **Fluxo de branch/Merge Request**: `git_service` já expõe `criar_branch`/`criar_merge_request`,
@@ -215,22 +217,24 @@ backup → grava README (cirúrgico) → registra histórico → confirma
        ↓
 /disponível separadamente: /publicar (commit + push, com confirmação)
 
-/editar:  EDITAR_NOME → EDITAR_ESCOLHA (nome | links | ambos)
+/editar:  EDITAR_NOME → [EDITAR_CANDIDATOS] → EDITAR_ESCOLHA (nome | links | ambos)
           → EDITAR_NOVO_NOME e/ou EDITAR_LINKS → PREVIEW → APROVACAO
-/remover: REMOVER_NOME → REMOVER_CONFIRMACAO (✅ Remover | ❌ Cancelar)
-/buscar:  BUSCAR_NOME → resultado (somente leitura)
+/remover: REMOVER_NOME → [REMOVER_CANDIDATOS] → REMOVER_CONFIRMACAO (✅ Remover | ❌ Cancelar)
+/buscar:  BUSCAR_NOME → resultado ou lista de candidatos (somente leitura)
 ```
 
 > **Ordem canônica dos estados** (`bot/handlers/state_manager.py`, região protegida):
 > ```
 > NOVA:     NOVA_NOME → NOVA_LINKS → NOVA_SECAO → PREVIEW → APROVACAO
-> EDITAR:   EDITAR_NOME → EDITAR_ESCOLHA → (EDITAR_NOVO_NOME →) [EDITAR_LINKS →] PREVIEW → APROVACAO
-> REMOVER:  REMOVER_NOME → REMOVER_CONFIRMACAO
+> EDITAR:   EDITAR_NOME → [EDITAR_CANDIDATOS] → EDITAR_ESCOLHA
+>           → (EDITAR_NOVO_NOME →) [EDITAR_LINKS →] PREVIEW → APROVACAO
+> REMOVER:  REMOVER_NOME → [REMOVER_CANDIDATOS] → REMOVER_CONFIRMACAO
 > BUSCAR:   BUSCAR_NOME
 > PUBLICAR: PUBLICAR_CONFIRMACAO
 > RESTAURAR:RESTAURAR_ESCOLHA → RESTAURAR_CONFIRMACAO
 > ```
 > A ramificação de `EDITAR_ESCOLHA` usa `campo_editar` (`nome` / `links` / `ambos`).
+> `EDITAR_CANDIDATOS`/`REMOVER_CANDIDATOS` são desvios opcionais quando a busca exata falha.
 
 ### Regras de negócio do README
 
@@ -392,8 +396,8 @@ sudo systemctl enable --now atualizar-repositorio-bot.service
 1. ✅ **Unit systemd instalada e ativa** (instância única); `restart` efetivado — **v0.2.1 em produção**
    (o commit **não** faz deploy; mudanças de código exigem `restart`).
 2. ✅ **Releases publicadas:** tags anotadas `v0.2.0` e `v0.2.1` criadas e **já publicadas** no `origin`.
-3. 🔜 **Busca fuzzy (§2.10):** match exato → fuzzy (`rapidfuzz`/`difflib`) + lista numerada de
-   candidatos; desempate por URL em nomes homônimos.
+3. ✅ **Busca fuzzy (§2.10):** `busca_service` (match exato → `difflib` com limiar `0,6`) + lista
+   numerada de candidatos; desempate por URL em nomes homônimos; testes em **258**.
 4. 🔜 **Criação de novas seções (§2.6):** âncora + título `## <emoji> <Título>` + tabela + atualização
    da "Navegação Rápida", inserida antes de `## 🤝 Como Contribuir`.
 5. 🔜 **Fluxo de branch/Merge Request:** usar `git_service.criar_branch`/`criar_merge_request` como
@@ -446,6 +450,9 @@ enquanto o serviço roda.
 > `CHANGELOG.md`.
 
 **Últimas mudanças (resumo):**
+- **21/10/2026** — **Busca fuzzy**: `bot/services/busca_service.py` (exato → `difflib`, limiar `0,6`,
+  até 5 candidatos, desempate por URL) integrado a `/buscar`, `/editar` e `/remover`, com estados
+  `EDITAR_CANDIDATOS`/`REMOVER_CANDIDATOS`; **+23 testes** (suíte em **258**).
 - **21/10/2026** — **Fix `Can't parse entities`**: escape Markdown dos valores dinâmicos
   (nome/seção/URL) nas mensagens do bot (`bot/handlers/menu.py`), fora de code span; **+3 testes**
   (suíte em **235**). Planejamento em `docs/planejamento-correcao-markdown-escape.md` (v1.3) e prompts
@@ -457,8 +464,6 @@ enquanto o serviço roda.
 - **21/10/2026** — **`v0.2.0`** (CHANGELOG preparado para a release): `bot/main.py` silencia o
   `PTBUserWarning` esperado; unit systemd (`bot/atualizar-repositorio-bot.service`) e `.venv`
   validados; **232 testes**.
-- **21/10/2026** — **`escrita_service`** (região protegida): `asyncio.Lock` global, `sincronizar_seguro`
-  (`fetch` + `pull --ff-only`) e `conferir_hash` antes de gravar (§2.12); **+12 testes** (suíte em 232).
 
 ---
 *Projeto: Atualização do Repositório de Comunidades | Mantenedor: José Roberto*

@@ -174,6 +174,12 @@ Soluções propostas:
   apresentar lista de candidatos numerada para o usuário escolher. Nunca editar/remover "no escuro".
 - Desempate por URL quando houver nomes homônimos.
 
+**Implementado (21/10/2026):** `bot/services/busca_service.py` — chave de busca sem acentos,
+emojis e pontuação; pontuação por igualdade/substring/tokens (`difflib`, limiar `0,6`); até 5
+candidatos ranqueados. Em `/buscar`, a lista é exibida em texto; em `/editar` e `/remover`, o
+usuário escolhe por botões (`EDITAR_CANDIDATOS`/`REMOVER_CANDIDATOS`); candidato único é
+selecionado automaticamente. Nomes homônimos exibem o primeiro link como desempate.
+
 ### 2.11 Rollback (item 11)
 Solução proposta:
 - `/restaurar` passa a ser **novo item do menu principal** (além de "↩️ Cancelar", que continua
@@ -314,6 +320,9 @@ atualizar-repositorio-comunidades/
    - **Deploy systemd: concluído** (`bot/atualizar-repositorio-bot.service` + `.venv` com as
      dependências); unit **instalada e ativa** (`enabled`/`active`, instância única). Após alterações
      de código, efetivar com `sudo systemctl restart atualizar-repositorio-bot.service`.
+10. Evoluções do fluxo conversacional.
+    - **Busca fuzzy: concluído** (`bot/services/busca_service.py` + 14 testes herméticos) — match
+      exato → fuzzy com lista numerada de candidatos e desempate por URL em nomes homônimos (§2.10).
 
 > Handoff canônico para a próxima sessão: `prompts/nova-conversa.md` (estado atual, fluxo, regras
 > técnicas, comandos, deploy e próximos passos). O antigo `docs/nova-sessao.md` permanece como

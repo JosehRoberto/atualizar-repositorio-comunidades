@@ -5,6 +5,23 @@
 
 ## [Unreleased]
 
+### Adicionado (21/10/2026) — Busca fuzzy com candidatos numerados (§2.10)
+
+- **Adicionado:** `bot/services/busca_service.py` — chave de busca sem acentos, emojis e pontuação;
+  pontuação por igualdade, substring e cobertura de tokens (`difflib`, limiar `0,6`); lista
+  ranqueada com até 5 candidatos e desempate por URL em nomes homônimos.
+- **Alterado:** `bot/handlers/menu.py` — `/buscar` exibe os candidatos em texto; `/editar` e
+  `/remover` passam a oferecer botões numerados quando não há match exato, com seleção automática
+  quando existe apenas um candidato; nova tentativa por texto continua disponível.
+- **Alterado:** `bot/handlers/state_manager.py` (região protegida) — estados
+  `EDITAR_CANDIDATOS` e `REMOVER_CANDIDATOS` e campo `candidatos` na conversa; a ordem canônica
+  permanece a mesma quando não há desvio fuzzy (§3.1).
+- **Testes:** +23 herméticos (`test_busca_service.py` = 14, `test_menu.py` = 9). Suíte em **258**.
+- **Validado:** `py_compile` OK; `pytest bot/tests/` → **258 passed**; busca real no clone
+  (`aws castanha` → *AWS User Group Castanhal*; `divas digital` → *Divas Digitais*).
+- **Arquivos:** `bot/services/busca_service.py`, `bot/handlers/menu.py`,
+  `bot/handlers/state_manager.py`, `bot/tests/test_busca_service.py`, `bot/tests/test_menu.py`.
+
 ## [0.2.1] - 2026-10-21
 
 ### Corrigido (21/10/2026) — Escape Markdown nas mensagens do bot

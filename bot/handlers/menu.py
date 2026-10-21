@@ -35,7 +35,7 @@ from bot.handlers.state_manager import (
     gerenciador,
 )
 from bot.models.comunidade import Comunidade, Link
-from bot.services import backup_service, escrita_service, historico_service
+from bot.services import backup_service, busca_service, escrita_service, historico_service
 from bot.services.git_service import GitError, GitService
 from bot.services.readme_service import (
     ComunidadeNaoEncontrada,
@@ -56,6 +56,8 @@ CB_EDITAR = "aprov_editar"
 CB_SECAO = "aprov_secao"
 CB_CANCELAR = "aprov_cancelar"
 PADRAO_APROVACAO = f"^({CB_OK}|{CB_EDITAR}|{CB_SECAO}|{CB_CANCELAR})$"
+PADRAO_CANDIDATOS_EDITAR = r"^edit_cand_(\d+)$"
+PADRAO_CANDIDATOS_REMOVER = r"^rem_cand_(\d+)$"
 
 PRONTO = "pronto"
 
@@ -90,6 +92,13 @@ def _chat_id(update: Update) -> int:
     if update.callback_query is not None:
         return update.callback_query.message.chat_id
     return update.message.chat_id
+
+
+def _mensagem(update: Update):
+    """Mensagem de resposta, seja atualização por texto ou por callback."""
+    if update.callback_query is not None:
+        return update.callback_query.message
+    return update.message
 
 
 # ---------------------------------------------------------------------------
@@ -176,6 +185,23 @@ def teclado_aprovacao() -> InlineKeyboardMarkup:
             ],
         ]
     )
+
+
+def teclado_candidatos(rotulos: list[str], prefixo: str) -> InlineKeyboardMarkup:
+    """Teclado numerado de candidatos; o callback carrega o índice do candidato."""
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton(f"{i}. {rotulo}", callback_data=f"{prefixo}_{i - 1}")]
+            for i, rotulo in enumerate(rotulos, start=1)
+        ]
+    )
+
+
+def texto_candidatos(rotulos: list[str], verbo: str) -> str:
+    """Mensagem com a lista numerada de candidatos similares."""
+    linhas = [f"🔍 Não encontrei exatamente. Selecione a comunidade que deseja {verbo}:"]
+    linhas += [f"{i}. {rotulo}" for i, rotulo in enumerate(rotulos, start=1)]
+    return "\n".join(linhas)
 
 
 def texto_preview(conversa, secao: str) -> str:
@@ -354,17 +380,44 @@ async def cmd_editar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Esta
     return EstadoConversa.EDITAR_NOME
 
 
-async def editar_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
-    """Localiza a comunidade a editar e oferece o que editar."""
-    conversa = gerenciador.obter(update.effective_user.id)
+def _guardar_candidatos(doc, conversa, ocorrencias) -> list[str]:
+    """Guarda (nome, seção, primeiro link) e devolve os rótulos para exibição."""
+    conversa.candidatos = [
+        (
+            oc.comunidade.nome,
+            oc.secao.nome,
+            oc.comunidade.links[0].url if oc.comunidade.links else "",
+        )
+        for oc in ocorrencias
+    ]
+    duplicados = busca_service.nomes_duplicados(doc)
+    return [busca_service.rotulo_candidato(oc, duplicados) for oc in ocorrencias]
+
+
+def _candidato_escolhido(conversa, indice: int):
+    """Relê o README e resolve o candidato pelo índice, desempatando pela URL."""
+    if not 0 <= indice < len(conversa.candidatos):
+        return None
+    nome, secao, url = conversa.candidatos[indice]
     doc = carregar_readme(Config.README_PATH)
-    ocorrencia = doc.buscar(update.message.text)
-    if ocorrencia is None:
-        await update.message.reply_text("⚠️ Comunidade não encontrada. Tente outro nome.")
-        return EstadoConversa.EDITAR_NOME
+    candidatos = [
+        oc for oc in doc.comunidades() if oc.comunidade.nome == nome and oc.secao.nome == secao
+    ]
+    if len(candidatos) > 1 and url:
+        candidatos = [
+            oc
+            for oc in candidatos
+            if oc.comunidade.links and oc.comunidade.links[0].url == url
+        ]
+    return candidatos[0] if candidatos else None
+
+
+async def _oferecer_edicao(update: Update, conversa, ocorrencia) -> EstadoConversa:
+    """Preenche o rascunho e oferece nome/links/ambos para edição."""
     conversa.nome_original = ocorrencia.comunidade.nome
     conversa.rascunho = Comunidade(ocorrencia.comunidade.nome, list(ocorrencia.comunidade.links))
     conversa.secao_alvo = ocorrencia.secao.nome
+    conversa.candidatos = []
     teclado = InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("Nome", callback_data="edit_nome")],
@@ -372,12 +425,55 @@ async def editar_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Est
             [InlineKeyboardButton("Nome e links", callback_data="edit_ambos")],
         ]
     )
-    await update.message.reply_text(
+    await _mensagem(update).reply_text(
         f"✏️ Editando *{_md(ocorrencia.comunidade.nome)}*.\nO que deseja alterar?",
         parse_mode="Markdown",
         reply_markup=teclado,
     )
     return EstadoConversa.EDITAR_ESCOLHA
+
+
+async def editar_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Localiza a comunidade a editar (exata ou fuzzy) e oferece o que editar."""
+    conversa = gerenciador.obter(update.effective_user.id)
+    doc = carregar_readme(Config.README_PATH)
+    termo = update.message.text.strip()
+    ocorrencia = doc.buscar(termo)
+    if ocorrencia is None:
+        lista = busca_service.candidatos(doc, termo)
+        if len(lista) == 1:
+            ocorrencia = lista[0]
+        elif lista:
+            rotulos = _guardar_candidatos(doc, conversa, lista)
+            await update.message.reply_text(
+                texto_candidatos(rotulos, "editar"),
+                reply_markup=teclado_candidatos(rotulos, "edit_cand"),
+            )
+            return EstadoConversa.EDITAR_CANDIDATOS
+        else:
+            await update.message.reply_text("⚠️ Comunidade não encontrada. Tente outro nome.")
+            return EstadoConversa.EDITAR_NOME
+    return await _oferecer_edicao(update, conversa, ocorrencia)
+
+
+async def editar_candidato(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Recebe o candidato escolhido na lista fuzzy e segue para a edição."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    conversa = gerenciador.obter(query.from_user.id)
+    try:
+        indice = int(query.data.rsplit("_", 1)[1])
+    except (IndexError, ValueError):
+        indice = -1
+    ocorrencia = _candidato_escolhido(conversa, indice)
+    if ocorrencia is None:
+        gerenciador.encerrar(query.from_user.id)
+        await query.message.reply_text("⚠️ Candidato inválido. Use /editar para recomeçar.")
+        return ConversationHandler.END
+    return await _oferecer_edicao(update, conversa, ocorrencia)
 
 
 async def editar_escolha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
@@ -438,16 +534,11 @@ async def cmd_remover(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Est
     return EstadoConversa.REMOVER_NOME
 
 
-async def remover_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
-    """Localiza a comunidade e pede confirmação."""
-    conversa = gerenciador.obter(update.effective_user.id)
-    doc = carregar_readme(Config.README_PATH)
-    ocorrencia = doc.buscar(update.message.text)
-    if ocorrencia is None:
-        await update.message.reply_text("⚠️ Comunidade não encontrada. Tente outro nome.")
-        return EstadoConversa.REMOVER_NOME
+async def _pedir_confirmacao_remocao(update: Update, conversa, ocorrencia) -> EstadoConversa:
+    """Preenche a conversa e pede confirmação explícita da remoção."""
     conversa.nome_original = ocorrencia.comunidade.nome
     conversa.secao_alvo = ocorrencia.secao.nome
+    conversa.candidatos = []
     conversa.hash_base = escrita_service.hash_atual(Config.README_PATH)
     teclado = InlineKeyboardMarkup(
         [[
@@ -455,12 +546,55 @@ async def remover_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Es
             InlineKeyboardButton("❌ Cancelar", callback_data="rem_nao"),
         ]]
     )
-    await update.message.reply_text(
+    await _mensagem(update).reply_text(
         f"🗑️ Remover *{_md(ocorrencia.comunidade.nome)}* de *{_md(ocorrencia.secao.nome)}*?",
         parse_mode="Markdown",
         reply_markup=teclado,
     )
     return EstadoConversa.REMOVER_CONFIRMACAO
+
+
+async def remover_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Localiza a comunidade (exata ou fuzzy) e pede confirmação."""
+    conversa = gerenciador.obter(update.effective_user.id)
+    doc = carregar_readme(Config.README_PATH)
+    termo = update.message.text.strip()
+    ocorrencia = doc.buscar(termo)
+    if ocorrencia is None:
+        lista = busca_service.candidatos(doc, termo)
+        if len(lista) == 1:
+            ocorrencia = lista[0]
+        elif lista:
+            rotulos = _guardar_candidatos(doc, conversa, lista)
+            await update.message.reply_text(
+                texto_candidatos(rotulos, "remover"),
+                reply_markup=teclado_candidatos(rotulos, "rem_cand"),
+            )
+            return EstadoConversa.REMOVER_CANDIDATOS
+        else:
+            await update.message.reply_text("⚠️ Comunidade não encontrada. Tente outro nome.")
+            return EstadoConversa.REMOVER_NOME
+    return await _pedir_confirmacao_remocao(update, conversa, ocorrencia)
+
+
+async def remover_candidato(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Recebe o candidato escolhido na lista fuzzy e pede confirmação."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    conversa = gerenciador.obter(query.from_user.id)
+    try:
+        indice = int(query.data.rsplit("_", 1)[1])
+    except (IndexError, ValueError):
+        indice = -1
+    ocorrencia = _candidato_escolhido(conversa, indice)
+    if ocorrencia is None:
+        gerenciador.encerrar(query.from_user.id)
+        await query.message.reply_text("⚠️ Candidato inválido. Use /remover para recomeçar.")
+        return ConversationHandler.END
+    return await _pedir_confirmacao_remocao(update, conversa, ocorrencia)
 
 
 async def remover_confirmacao(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
@@ -521,9 +655,17 @@ async def buscar_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Est
     termo = update.message.text.strip()
     ocorrencia = doc.buscar(termo)
     if ocorrencia is None:
-        candidatos = [oc.comunidade.nome for oc in doc.comunidades() if termo.lower() in oc.comunidade.nome.lower()]
-        if candidatos:
-            await update.message.reply_text("🔍 Não encontrei exatamente. Talvez:\n" + "\n".join(candidatos))
+        lista = busca_service.candidatos(doc, termo)
+        if lista:
+            duplicados = busca_service.nomes_duplicados(doc)
+            linhas = [
+                f"• {busca_service.rotulo_candidato(oc, duplicados)} "
+                f"(seção {oc.secao.nome})"
+                for oc in lista
+            ]
+            await update.message.reply_text(
+                "🔍 Não encontrei exatamente. Talvez:\n" + "\n".join(linhas)
+            )
         else:
             await update.message.reply_text("🔍 Nenhuma comunidade encontrada.")
         gerenciador.encerrar(update.effective_user.id)
@@ -678,10 +820,18 @@ def montar_conversation_handler() -> ConversationHandler:
         EstadoConversa.NOVA_LINKS: [MessageHandler(filters.TEXT & ~filters.COMMAND, nova_links)],
         EstadoConversa.NOVA_SECAO: [MessageHandler(filters.TEXT & ~filters.COMMAND, nova_secao)],
         EstadoConversa.EDITAR_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_nome)],
+        EstadoConversa.EDITAR_CANDIDATOS: [
+            CallbackQueryHandler(editar_candidato, pattern=PADRAO_CANDIDATOS_EDITAR),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, editar_nome),
+        ],
         EstadoConversa.EDITAR_ESCOLHA: [CallbackQueryHandler(editar_escolha, pattern="^edit_(nome|links|ambos)$")],
         EstadoConversa.EDITAR_NOVO_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_novo_nome)],
         EstadoConversa.EDITAR_LINKS: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_links)],
         EstadoConversa.REMOVER_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, remover_nome)],
+        EstadoConversa.REMOVER_CANDIDATOS: [
+            CallbackQueryHandler(remover_candidato, pattern=PADRAO_CANDIDATOS_REMOVER),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, remover_nome),
+        ],
         EstadoConversa.REMOVER_CONFIRMACAO: [CallbackQueryHandler(remover_confirmacao, pattern="^rem_(ok|nao)$")],
         EstadoConversa.BUSCAR_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, buscar_nome)],
         EstadoConversa.APROVACAO: [CallbackQueryHandler(aprovacao, pattern=PADRAO_APROVACAO)],

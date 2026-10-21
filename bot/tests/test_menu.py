@@ -25,6 +25,8 @@ from bot.handlers.menu import (
     persistir,
     resolver_secao,
     teclado_aprovacao,
+    teclado_candidatos,
+    texto_candidatos,
     texto_lista_secoes,
     texto_preview,
     texto_resumo_comunidade,
@@ -143,6 +145,19 @@ class TestTeclado:
         teclado = teclado_aprovacao()
         callbacks = [botao.callback_data for linha in teclado.inline_keyboard for botao in linha]
         assert callbacks == [CB_OK, CB_EDITAR, CB_SECAO, CB_CANCELAR]
+
+
+class TestCandidatos:
+    def test_teclado_numerado_com_indices(self):
+        teclado = teclado_candidatos(["Delphi", "Divas"], "edit_cand")
+        botoes = [botao for linha in teclado.inline_keyboard for botao in linha]
+        assert [b.text for b in botoes] == ["1. Delphi", "2. Divas"]
+        assert [b.callback_data for b in botoes] == ["edit_cand_0", "edit_cand_1"]
+
+    def test_texto_candidatos(self):
+        texto = texto_candidatos(["Delphi", "Divas"], "remover")
+        assert "remover" in texto
+        assert "1. Delphi" in texto and "2. Divas" in texto
 
 
 class TestPreview:
@@ -304,6 +319,13 @@ class FakeContext:
         self.user_data = {}
 
 
+def _update_texto(texto, uid=1):
+    update = FakeUpdate(None, uid)
+    update.callback_query = None
+    update.message.text = texto
+    return update
+
+
 class FakeGit:
     def sincronizar(self):
         pass
@@ -349,6 +371,84 @@ class TestAprovacaoSeguranca:
         assert any(
             escrita_service.MENSAGEM_OCUPADO in t for t, _ in update.callback_query.message.sent
         )
+
+
+class TestBuscaFuzzyHandlers:
+    @pytest.mark.asyncio
+    async def test_editar_fuzzy_lista_candidatos(self, ambiente_menu):
+        gerenciador.iniciar(1, Acao.EDITAR)
+        update = _update_texto("d")
+        estado = await menu.editar_nome(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_CANDIDATOS
+        conversa = gerenciador.obter(1)
+        assert len(conversa.candidatos) >= 2
+        assert update.message.sent
+
+    @pytest.mark.asyncio
+    async def test_editar_candidato_escolhido(self, ambiente_menu):
+        gerenciador.iniciar(1, Acao.EDITAR)
+        await menu.editar_nome(_update_texto("d"), FakeContext())
+        update = FakeUpdate("edit_cand_0")
+        estado = await menu.editar_candidato(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_ESCOLHA
+        conversa = gerenciador.obter(1)
+        assert conversa.rascunho.nome == "Delphi"
+        assert conversa.candidatos == []
+
+    @pytest.mark.asyncio
+    async def test_editar_candidato_unico_nao_lista(self, ambiente_menu):
+        gerenciador.iniciar(1, Acao.EDITAR)
+        estado = await menu.editar_nome(_update_texto("delph"), FakeContext())
+        assert estado is EstadoConversa.EDITAR_ESCOLHA
+        assert gerenciador.obter(1).nome_original == "Delphi"
+
+    @pytest.mark.asyncio
+    async def test_remover_fuzzy_lista_e_confirmacao(self, ambiente_menu):
+        gerenciador.iniciar(1, Acao.REMOVER)
+        estado = await menu.remover_nome(_update_texto("d"), FakeContext())
+        assert estado is EstadoConversa.REMOVER_CANDIDATOS
+        update = FakeUpdate("rem_cand_0")
+        estado = await menu.remover_candidato(update, FakeContext())
+        assert estado is EstadoConversa.REMOVER_CONFIRMACAO
+        conversa = gerenciador.obter(1)
+        assert conversa.nome_original == "Delphi"
+        assert conversa.hash_base
+
+    @pytest.mark.asyncio
+    async def test_remover_candidato_invalido(self, ambiente_menu):
+        gerenciador.iniciar(1, Acao.REMOVER)
+        await menu.remover_nome(_update_texto("d"), FakeContext())
+        update = FakeUpdate("rem_cand_99")
+        estado = await menu.remover_candidato(update, FakeContext())
+        assert estado == ConversationHandler.END
+        assert gerenciador.obter(1).estado is EstadoConversa.IDLE
+
+    def test_candidato_desempata_pela_url(self, tmp_path, monkeypatch):
+        readme = tmp_path / "README.md"
+        readme.write_text(
+            """<a name="c"></a>
+## 🏙️ Capítulos
+
+| Comunidade | Links |
+|---|---|
+| **Comunidade X** | <a href="https://x.com/primeira" title="Site"><img src="x"/></a> |
+| **Comunidade X** | <a href="https://x.com/segunda" title="Site"><img src="x"/></a> |
+""",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(Config, "README_PATH", readme)
+        conversa = ConversaUsuario(user_id=1)
+        conversa.candidatos = [("Comunidade X", "Capítulos", "https://x.com/segunda")]
+        ocorrencia = menu._candidato_escolhido(conversa, 0)
+        assert ocorrencia.comunidade.links[0].url == "https://x.com/segunda"
+
+    @pytest.mark.asyncio
+    async def test_buscar_fuzzy_mostra_candidatos(self, ambiente_menu):
+        update = _update_texto("d")
+        estado = await menu.buscar_nome(update, FakeContext())
+        assert estado == ConversationHandler.END
+        texto = update.message.sent[0][0]
+        assert "Delphi" in texto and "Divas Digitais" in texto
 
 
 class TestEscapeMarkdown:

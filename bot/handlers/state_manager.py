@@ -11,7 +11,7 @@ comentário ``# ALTERADO [data]: ...``.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
@@ -26,13 +26,16 @@ class EstadoConversa(Enum):
     NOVA_NOME = "nova_nome"
     NOVA_LINKS = "nova_links"
     NOVA_SECAO = "nova_secao"
+    # ALTERADO [21/10/2026]: estados de candidatos para busca fuzzy (§2.10).
     # Editar comunidade
     EDITAR_NOME = "editar_nome"
+    EDITAR_CANDIDATOS = "editar_candidatos"
     EDITAR_ESCOLHA = "editar_escolha"
     EDITAR_NOVO_NOME = "editar_novo_nome"
     EDITAR_LINKS = "editar_links"
     # Remover comunidade
     REMOVER_NOME = "remover_nome"
+    REMOVER_CANDIDATOS = "remover_candidatos"
     REMOVER_CONFIRMACAO = "remover_confirmacao"
     # Buscar comunidade
     BUSCAR_NOME = "buscar_nome"
@@ -73,6 +76,7 @@ ORDEM_POR_ACAO: dict[Acao, list[EstadoConversa]] = {
     ],
     Acao.EDITAR: [
         EstadoConversa.EDITAR_NOME,
+        EstadoConversa.EDITAR_CANDIDATOS,
         EstadoConversa.EDITAR_ESCOLHA,
         EstadoConversa.EDITAR_NOVO_NOME,
         EstadoConversa.EDITAR_LINKS,
@@ -81,6 +85,7 @@ ORDEM_POR_ACAO: dict[Acao, list[EstadoConversa]] = {
     ],
     Acao.REMOVER: [
         EstadoConversa.REMOVER_NOME,
+        EstadoConversa.REMOVER_CANDIDATOS,
         EstadoConversa.REMOVER_CONFIRMACAO,
     ],
     Acao.BUSCAR: [EstadoConversa.BUSCAR_NOME],
@@ -103,6 +108,7 @@ class ConversaUsuario:
     nome_original: str | None = None
     secao_alvo: str | None = None
     campo_editar: str | None = None
+    candidatos: list[tuple[str, str, str]] = field(default_factory=list)
     backup_escolhido: str | None = None
     hash_base: str | None = None
     iniciada_em: datetime | None = None
@@ -119,6 +125,7 @@ class ConversaUsuario:
         self.nome_original = None
         self.secao_alvo = None
         self.campo_editar = None
+        self.candidatos = []
         self.backup_escolhido = None
         self.hash_base = None
         self.iniciada_em = None
@@ -167,6 +174,9 @@ class GerenciadorEstado:
             return None
 
         if conversa.acao is Acao.EDITAR:
+            # ALTERADO [21/10/2026]: candidatos são um desvio opcional da busca fuzzy.
+            if conversa.estado is EstadoConversa.EDITAR_NOME:
+                return EstadoConversa.EDITAR_ESCOLHA
             if conversa.estado is EstadoConversa.EDITAR_ESCOLHA:
                 if conversa.campo_editar == CAMPO_LINKS:
                     return EstadoConversa.EDITAR_LINKS
@@ -175,6 +185,9 @@ class GerenciadorEstado:
                 if conversa.campo_editar == CAMPO_AMBOS:
                     return EstadoConversa.EDITAR_LINKS
                 return EstadoConversa.PREVIEW
+
+        if conversa.acao is Acao.REMOVER and conversa.estado is EstadoConversa.REMOVER_NOME:
+            return EstadoConversa.REMOVER_CONFIRMACAO
 
         indice = ordem.index(conversa.estado)
         if indice + 1 < len(ordem):
