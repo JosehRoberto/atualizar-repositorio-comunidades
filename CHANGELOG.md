@@ -5,6 +5,8 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-21
+
 ### Corrigido (21/10/2026) — Escape Markdown nas mensagens do bot
 
 - **Corrigido:** `bot/handlers/menu.py` — escapa valores dinâmicos (nome de comunidade, seção e URL)

@@ -57,7 +57,7 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
   - `services/` — implementados (região protegida): `readme_service`, `backup_service`,
     `historico_service`, `tempo`, `git_service`, `validacao_service` e `escrita_service`.
   - `atualizar-repositorio-bot.service` — unit systemd (instância única).
-  - `tests/` — **232** testes herméticos (config, modelo, schemas, serviços e fluxo) **passando**.
+  - `tests/` — **235** testes herméticos (config, modelo, schemas, serviços e fluxo) **passando**.
 - Raiz: `pytest.ini`, `requirements-test.txt`, `README.md`, `bot/requirements.txt`,
   `bot/.env.example`.
 - `bot/.env` **configurado** (não versionado): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`
@@ -65,8 +65,9 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
 - Bot **operacional**: `create_application()` monta a aplicação e o smoke test iniciou o polling sem
   erros (bot `@atualizar_repositorio_bot`).
 - Segurança: rotação do token GitLab **concluída** (token antigo revogado; exposição local removida).
-- **Pendente:** instalar a unit systemd (passos com `sudo`, ver `README.md §Deploy`). Os itens 1–9
-  estão implementados e testados (232 testes).
+- **Unit systemd instalada e ativa** (instância única); após mudanças de código, efetivar com
+  `sudo systemctl restart atualizar-repositorio-bot.service`. Os itens 1–9 estão implementados e
+  testados (235 testes).
 
 ### Próximos passos (ordem recomendada)
 
@@ -119,6 +120,6 @@ git status --short
 
 ### Ponto de entrada
 
-Os itens 1–9 estão implementados e testados (232 testes). Próximo passo: instalar a unit systemd
-(passos com `sudo` em `README.md §Deploy`) e, se desejado, criar tag anotada `v0.2.0` e publicar
-(push para `origin/main`).
+Os itens 1–9 estão implementados e testados (235 testes). Unit systemd instalada e ativa; após
+mudanças de código, reiniciar o serviço. Release publicada: tag anotada `v0.2.1` (fix do escape
+Markdown).

@@ -447,9 +447,9 @@ enquanto o serviço roda.
 **Últimas mudanças (resumo):**
 - **21/10/2026** — **Fix `Can't parse entities`**: escape Markdown dos valores dinâmicos
   (nome/seção/URL) nas mensagens do bot (`bot/handlers/menu.py`), fora de code span; **+3 testes**
-  (suíte em **235**). Planejamento em `docs/planejamento-correcao-markdown-escape.md` (v1.2) e prompts
+  (suíte em **235**). Planejamento em `docs/planejamento-correcao-markdown-escape.md` (v1.3) e prompts
   `prompt-criacao-planejamento-correcao-bug.md`, `prompt-criacao-planejamento-estrategico.md`,
-  `prompt-revisao-risco-planejamento.md`. **Pendente:** restart systemd (R6).
+  `prompt-revisao-risco-planejamento.md`. **Em produção:** restart systemd efetivado (R6 concluído).
 - **21/10/2026** — **Handoff canônico** (`f9f59ab`): adicionado `prompts/nova-conversa.md`;
   `docs/requisitos.md`, `README.md` e `docs/nova-sessao.md` passam a apontar para ele
   (`nova-sessao.md` marcado como histórico).

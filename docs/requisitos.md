@@ -312,7 +312,8 @@ atualizar-repositorio-comunidades/
      README (§2.12).
 9. Configurar a unit systemd para deploy (`bot/.env` já configurado).
    - **Deploy systemd: concluído** (`bot/atualizar-repositorio-bot.service` + `.venv` com as
-     dependências); falta apenas a instalação da unit (passo `sudo` do usuário).
+     dependências); unit **instalada e ativa** (`enabled`/`active`, instância única). Após alterações
+     de código, efetivar com `sudo systemctl restart atualizar-repositorio-bot.service`.
 
 > Handoff canônico para a próxima sessão: `prompts/nova-conversa.md` (estado atual, fluxo, regras
 > técnicas, comandos, deploy e próximos passos). O antigo `docs/nova-sessao.md` permanece como
