@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### Documentação (21/10/2026) — Prompt de continuidade para nova sessão
+
+- **Adicionado:** `docs/nova-sessao.md` — prompt de handoff para uma nova sessão do OpenCode com
+  contexto, estado atual, próximos passos ordenados e convenções obrigatórias.
+- **Arquivos:** `docs/nova-sessao.md`.
+
 ### v0.1.0 (21/10/2026) — Estrutura inicial e esqueleto do bot
 
 - **Adicionado:** commit inicial do projeto (`8af47a3`) — `.gitignore`, `AGENTS.md`, `CHANGELOG.md`,
