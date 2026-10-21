@@ -5,6 +5,33 @@
 
 ## [Unreleased]
 
+### Adicionado (21/10/2026) — Handlers do menu e fluxo conversacional (`menu`)
+
+- **Adicionado:** `bot/handlers/menu.py` — consome a máquina de estados e conduz o fluxo
+  conversacional do Telegram: **nova** (nome → links → seção → preview → aprovação),
+  **editar** (busca → escolha do campo → novo valor → preview → aprovação),
+  **remover** (busca → confirmação) e **buscar** (consulta somente leitura). Gera o **preview**
+  a partir do rascunho e trata a aprovação (`✅ Aprovar`, `✏️ Editar`, `🔀 Trocar seção`, `❌ Cancelar`).
+  Inclui backup + escrita cirúrgica no README e registro de histórico, com guarda de
+  `TELEGRAM_ALLOWED_USER_IDS`.
+- **Testes:** +22 herméticos (`bot/tests/test_menu.py`) — transições de estado, coleta de dados,
+  preview, aprovação/edição/cancelamento e caminhos de erro. API do Telegram, serviços de arquivo
+  e backup mockados/isolados. Suíte em **191**.
+- **Validado:** `py_compile` OK; `pytest bot/tests/` → **191 passed**.
+- **Arquivos:** `bot/handlers/menu.py`, `bot/tests/test_menu.py`.
+
+### Adicionado (21/10/2026) — Máquina de estados do fluxo conversacional (`state_manager`)
+
+- **Adicionado:** `bot/handlers/state_manager.py` (região protegida) — define `EstadoConversa`,
+  `Acao`, `ConversaUsuario` e `GerenciadorEstado`; mantém o rascunho e a posição no fluxo por
+  usuário e calcula a **ordem de transição** de cada ação (nova/editar/remover/buscar), com a
+  ramificação de edição em `EDITAR_ESCOLHA` (nome/links/ambos). Lógica pura, sem I/O nem dependência
+  do Telegram.
+- **Testes:** +22 herméticos (`bot/tests/test_state_manager.py`) — criação/reset de conversa,
+  `iniciar`/`encerrar`, ordem dos estados e ramificações de edição. Suíte em **169**.
+- **Validado:** `py_compile` OK; `pytest bot/tests/` → **169 passed**.
+- **Arquivos:** `bot/handlers/state_manager.py`, `bot/tests/test_state_manager.py`.
+
 ### Adicionado (21/10/2026) — Serviço de validações (`validacao_service`)
 
 - **Adicionado:** `bot/services/validacao_service.py` (região protegida) — validações de §2.8:

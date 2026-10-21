@@ -40,13 +40,18 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
 - `bot/`:
   - `config.py` — lê `.env` (`Config`, `validar()`), sem segredos hardcoded.
   - `main.py` — logging (silencia `httpx`/`httpcore`) + `run_polling`.
-  - `handlers/commands.py` — `create_application()`, `/start` (menu) e `/cancelar`, guard de
+  - `handlers/commands.py` — `create_application()` (registra o `ConversationHandler` do menu
+    **antes** dos comandos globais), `/start` (menu), `/cancelar` e `/listar`, guard de
     `TELEGRAM_ALLOWED_USER_IDS`, error handler.
+  - `handlers/state_manager.py` — máquina de estados (`EstadoConversa`, `Acao`, `ConversaUsuario`,
+    `GerenciadorEstado`); ordem de transição por ação (região protegida).
+  - `handlers/menu.py` — fluxo conversacional (nova/editar/remover/buscar) com **preview** e
+    aprovação (`✅/✏️/🔀/❌`); backup + escrita cirúrgica + histórico.
   - `models/comunidade.py` — `Comunidade`, `Link`, `nome_normalizado()` (minúsculas, sem acentos).
   - `schemas/comunidade.py` — `ComunidadeSchema`, `LinkSchema` (pydantic v2, valida URL).
   - `services/` — implementados (região protegida): `readme_service`, `backup_service`,
     `historico_service`, `tempo`, `git_service` e `validacao_service`.
-  - `tests/` — 147 testes herméticos (config, modelo, schemas e serviços) **passando**.
+  - `tests/` — **191** testes herméticos (config, modelo, schemas, serviços e fluxo) **passando**.
 - Raiz: `pytest.ini`, `requirements-test.txt`, `README.md`, `bot/requirements.txt`,
   `bot/.env.example`.
 - `bot/.env` **configurado** (não versionado): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`
@@ -54,7 +59,8 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
 - Bot **operacional**: `create_application()` monta a aplicação e o smoke test iniciou o polling sem
   erros (bot `@atualizar_repositorio_bot`).
 - Segurança: rotação do token GitLab **concluída** (token antigo revogado; exposição local removida).
-- **Ainda não há** o fluxo conversacional completo (`state_manager.py` + handlers do menu).
+- **Pendente:** publicação (`/publicar`), restauração (`/restaurar`), multi-usuário
+  (`asyncio.Lock`), comandos `/validar` e `/historico` no menu e deploy via systemd.
 
 ### Próximos passos (ordem recomendada)
 
@@ -74,10 +80,11 @@ Implementar cada item **com teste hermético** antes de avançar:
    **sem** embutir token em URL; mockar `requests`/`subprocess` nos testes. **Concluído** (24 testes).
 5. ✅ **Validações** — `🧩 Validar README` e duplicidade (nome/URL): `docs/requisitos.md` §2.8.
    **Concluído** (`bot/services/validacao_service.py`, 50 testes).
-6. **Fluxo conversacional** — `bot/handlers/state_manager.py` (ordem dos estados) + handlers do menu
-   (nova/buscar/editar/remover/listar) com **preview** e **aprovação** (`✅/✏️/🔀/❌`). *← próximo*
+6. ✅ **Fluxo conversacional** — `bot/handlers/state_manager.py` (ordem dos estados) + handlers do menu
+   (nova/buscar/editar/remover/listar) com **preview** e **aprovação** (`✅/✏️/🔀/❌`).
+   **Concluído** (22 testes em `test_state_manager.py` + 22 em `test_menu.py`).
 7. **Publicação** — `/publicar` como etapa separada, **somente com confirmação explícita**;
-   `rollback`/`/restaurar` (lista backups, diff, confirmação).
+   `rollback`/`/restaurar` (lista backups, diff, confirmação). *← próximo*
 8. **Multi-usuário/segurança** — `asyncio.Lock` por arquivo; `git pull --ff-only` antes de editar;
    recheck de hash antes de gravar.
 9. **Deploy local (systemd)** — criar `.venv` e a unit `bot/atualizar-repositorio-bot.service`
@@ -104,6 +111,6 @@ git status --short
 
 ### Ponto de entrada
 
-Comece pelo item 1 (parser/editor do README) — é o núcleo do domínio e destrava os demais.
-Antes de codar, leia `docs/requisitos.md` §2.4–2.6 e o `repositorio/README.md` para confirmar as
-seções reais e as variações de tabela.
+Comece pelo item 7 (publicação `/publicar` e rollback `/restaurar`) — os itens 1–6 já estão
+implementados. Antes de codar, leia `docs/requisitos.md` §2.11 (rollback) e §2.12 (multi-usuário) e o
+`bot/services/git_service.py` (commit/branch/push/MR já disponíveis).
