@@ -169,8 +169,9 @@ atualizar-repositorio-comunidades/
 
 ### Pendente / Em investigação
 
-- **Unit systemd instalada e ativa** (`enabled`/`active`, instância única). Após alterações no
-  código, efetivar com `sudo systemctl restart atualizar-repositorio-bot.service` (ver §6.1/§13).
+- **Deploy (nota operacional):** unit systemd instalada e ativa (`enabled`/`active`, instância única);
+  após alterações no código, efetivar com `sudo systemctl restart atualizar-repositorio-bot.service`
+  (ver §6.1/§13).
 - **Busca fuzzy (§2.10)**: hoje `buscar`/`editar`/`remover` usam match exato pela chave normalizada
   com fallback por substring (`menu.buscar_nome`); evolução prevista: fuzzy (`rapidfuzz`/`difflib`) +
   lista numerada de candidatos.
@@ -388,8 +389,8 @@ sudo systemctl enable --now atualizar-repositorio-bot.service
 
 ## 9. Próximos Passos
 
-1. ✅ **Unit systemd instalada e ativa** (instância única). Pendente apenas o `restart` para efetivar
-   correções de código (o commit **não** faz deploy).
+1. ✅ **Unit systemd instalada e ativa** (instância única); `restart` efetivado — **v0.2.1 em produção**
+   (o commit **não** faz deploy; mudanças de código exigem `restart`).
 2. ✅ **Releases publicadas:** tags anotadas `v0.2.0` e `v0.2.1` criadas e **já publicadas** no `origin`.
 3. 🔜 **Busca fuzzy (§2.10):** match exato → fuzzy (`rapidfuzz`/`difflib`) + lista numerada de
    candidatos; desempate por URL em nomes homônimos.
