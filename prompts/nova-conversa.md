@@ -44,7 +44,7 @@ formatação Markdown existentes, com backup, preview, aprovação explícita e 
 | Versão | `v0.2.0` (tag anotada) |
 | Python | Python 3.12 |
 | Biblioteca | `python-telegram-bot` 22.8 (v20+) |
-| Testes | **232** herméticos |
+| Testes | **235** herméticos |
 
 **Escopo do cadastro (schema real do README):**
 - Cada comunidade tem **apenas `nome` + `links`** (`| Comunidade | Links |`) — sem cidade,
@@ -72,6 +72,7 @@ atualizar-repositorio-comunidades/
 │   ├── nova-sessao.md                 ← handoff anterior (histórico)
 │   ├── prompt-inicial.md              ← prompt de kickoff do projeto
 │   ├── planejamento-skill-criacao-bot-telegram.md
+│   ├── planejamento-correcao-markdown-escape.md ← planejamento de correção (fix Can't parse entities)
 │   └── metodologia-projeto-bot-telegram.md (ponteiro p/ a skill)
 ├── bot/                               ← código do bot (Desktop via systemd)
 │   ├── .env                           ← segredos (nunca expor ou commitar)
@@ -100,7 +101,7 @@ atualizar-repositorio-comunidades/
 │   │   ├── validacao_service.py       ← validações §2.8 + `🧩 Validar README`
 │   │   └── escrita_service.py         ← `asyncio.Lock` + sync + recheck de hash (§2.12)
 │   ├── history/                        ← `historico.jsonl` (não versionado)
-│   └── tests/                          ← pytest (232 testes herméticos)
+│   └── tests/                          ← pytest (235 testes herméticos)
 │       ├── conftest.py
 │       ├── test_config.py, test_models.py, test_schemas.py
 │       ├── test_readme_service.py, test_backup_service.py, test_historico_service.py
@@ -110,7 +111,10 @@ atualizar-repositorio-comunidades/
 │   ├── README.md                       ← alvo das edições do bot (fonte da verdade)
 │   └── LICENSE                         ← preservar (não editar)
 └── prompts/
-    └── nova-conversa.md               ← este arquivo
+    ├── nova-conversa.md               ← este arquivo
+    ├── prompt-criacao-planejamento-correcao-bug.md
+    ├── prompt-criacao-planejamento-estrategico.md
+    └── prompt-revisao-risco-planejamento.md
 ```
 
 ---
@@ -165,8 +169,8 @@ atualizar-repositorio-comunidades/
 
 ### Pendente / Em investigação
 
-- **Instalar/ativar a unit systemd** (requer `sudo`, do usuário): copiar para
-  `/etc/systemd/system/`, `daemon-reload` e `enable --now` — ver `README.md §Deploy`.
+- **Unit systemd instalada e ativa** (`enabled`/`active`, instância única). Após alterações no
+  código, efetivar com `sudo systemctl restart atualizar-repositorio-bot.service` (ver §6.1/§13).
 - **Busca fuzzy (§2.10)**: hoje `buscar`/`editar`/`remover` usam match exato pela chave normalizada
   com fallback por substring (`menu.buscar_nome`); evolução prevista: fuzzy (`rapidfuzz`/`difflib`) +
   lista numerada de candidatos.
@@ -187,6 +191,7 @@ atualizar-repositorio-comunidades/
 | `409 Conflict` no `getUpdates` (duas instâncias) | Garantir **instância única** via systemd; nunca subir bot duplicado |
 | Token GitLab exposto em texto no `.git/config` do clone antigo e em `~/.git-credentials` | Token removido desses locais, antigo **revogado**; autenticação por token em runtime (`GITLAB_TOKEN`), sem persistir em remote |
 | Disparidade entre `docs/requisitos.md`, `AGENTS.md`, `README.md` e o código | Sincronização documental (handoff, próximos passos, nome da unit) |
+| `Can't parse entities` ao enviar mensagens (`parse_mode="Markdown"`) | URLs com `_` do README intercaladas cruas; escape com `telegram.helpers.escape_markdown(version=1)` fora de code span (`bot/handlers/menu.py`) |
 
 ---
 
@@ -383,8 +388,8 @@ sudo systemctl enable --now atualizar-repositorio-bot.service
 
 ## 9. Próximos Passos
 
-1. ⏳ **Instalar/ativar a unit systemd** (passos `sudo` em `README.md §Deploy`) — única pendência para
-   o deploy de produção.
+1. ✅ **Unit systemd instalada e ativa** (instância única). Pendente apenas o `restart` para efetivar
+   correções de código (o commit **não** faz deploy).
 2. ✅ **Publicar a release:** tag anotada `v0.2.0` criada e **já publicada** no `origin`.
 3. 🔜 **Busca fuzzy (§2.10):** match exato → fuzzy (`rapidfuzz`/`difflib`) + lista numerada de
    candidatos; desempate por URL em nomes homônimos.
@@ -440,6 +445,11 @@ enquanto o serviço roda.
 > `CHANGELOG.md`.
 
 **Últimas mudanças (resumo):**
+- **21/10/2026** — **Fix `Can't parse entities`**: escape Markdown dos valores dinâmicos
+  (nome/seção/URL) nas mensagens do bot (`bot/handlers/menu.py`), fora de code span; **+3 testes**
+  (suíte em **235**). Planejamento em `docs/planejamento-correcao-markdown-escape.md` (v1.2) e prompts
+  `prompt-criacao-planejamento-correcao-bug.md`, `prompt-criacao-planejamento-estrategico.md`,
+  `prompt-revisao-risco-planejamento.md`. **Pendente:** restart systemd (R6).
 - **21/10/2026** — **Handoff canônico** (`f9f59ab`): adicionado `prompts/nova-conversa.md`;
   `docs/requisitos.md`, `README.md` e `docs/nova-sessao.md` passam a apontar para ele
   (`nova-sessao.md` marcado como histórico).
