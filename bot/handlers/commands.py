@@ -6,6 +6,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 from bot.config import Config
+from bot.handlers.menu import cmd_listar, montar_conversation_handler
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,9 @@ def create_application() -> Application:
         raise RuntimeError("TELEGRAM_BOT_TOKEN não configurado")
 
     application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
+    application.add_handler(montar_conversation_handler())
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("cancelar", cancelar))
+    application.add_handler(CommandHandler("listar", cmd_listar))
     application.add_error_handler(error_handler)
     return application
