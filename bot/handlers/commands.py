@@ -6,21 +6,22 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 from bot.config import Config
-from bot.handlers.menu import cmd_listar, montar_conversation_handler
+from bot.handlers.menu import cmd_historico, cmd_listar, cmd_validar, montar_conversation_handler
 
 logger = logging.getLogger(__name__)
 
 MENU = (
     "📋 Menu principal:\n"
-    "➕ Nova comunidade\n"
-    "🔍 Buscar comunidade\n"
-    "✏️ Editar comunidade\n"
-    "🗑️ Remover comunidade\n"
-    "📋 Listar comunidades\n"
-    "🧩 Validar README\n"
-    "📜 Histórico de alterações\n"
-    "⬆️ Publicar alterações\n"
-    "↩️ Cancelar"
+    "/nova — ➕ Nova comunidade\n"
+    "/buscar — 🔍 Buscar comunidade\n"
+    "/editar — ✏️ Editar comunidade\n"
+    "/remover — 🗑️ Remover comunidade\n"
+    "/listar — 📋 Listar comunidades\n"
+    "/validar — 🧩 Validar README\n"
+    "/historico — 📜 Histórico de alterações\n"
+    "/publicar — ⬆️ Publicar alterações\n"
+    "/restaurar — ♻️ Restaurar backup\n"
+    "/cancelar — ↩️ Cancelar"
 )
 
 
@@ -62,5 +63,7 @@ def create_application() -> Application:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("cancelar", cancelar))
     application.add_handler(CommandHandler("listar", cmd_listar))
+    application.add_handler(CommandHandler("validar", cmd_validar))
+    application.add_handler(CommandHandler("historico", cmd_historico))
     application.add_error_handler(error_handler)
     return application

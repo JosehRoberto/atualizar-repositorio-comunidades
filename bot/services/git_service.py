@@ -124,6 +124,11 @@ class GitService:
         """True se não há alterações pendentes no clone."""
         return not self._git("status", "--porcelain").stdout.strip()
 
+    def alteracoes(self) -> list[str]:
+        """Lista as alterações pendentes (`git status --porcelain`), linha a linha."""
+        saida = self._git("status", "--porcelain").stdout
+        return [linha for linha in saida.splitlines() if linha.strip()]
+
     def fetch(self) -> None:
         """Busca atualizações do remoto (sem alterar a árvore)."""
         self._git("fetch", "origin")

@@ -85,7 +85,14 @@ class TestGerenciadorBasico:
 
 class TestOrdemPorAcao:
     def test_cada_acao_tem_ordem(self):
-        assert set(ORDEM_POR_ACAO) == {Acao.NOVA, Acao.EDITAR, Acao.REMOVER, Acao.BUSCAR}
+        assert set(ORDEM_POR_ACAO) == {
+            Acao.NOVA,
+            Acao.EDITAR,
+            Acao.REMOVER,
+            Acao.BUSCAR,
+            Acao.PUBLICAR,
+            Acao.RESTAURAR,
+        }
 
     def test_nova_termina_em_aprovacao(self):
         assert ORDEM_POR_ACAO[Acao.NOVA][-1] is EstadoConversa.APROVACAO
@@ -98,6 +105,15 @@ class TestOrdemPorAcao:
 
     def test_buscar_e_terminal(self):
         assert ORDEM_POR_ACAO[Acao.BUSCAR] == [EstadoConversa.BUSCAR_NOME]
+
+    def test_publicar_tem_confirmacao(self):
+        assert ORDEM_POR_ACAO[Acao.PUBLICAR] == [EstadoConversa.PUBLICAR_CONFIRMACAO]
+
+    def test_restaurar_sequencia_de_estados(self):
+        assert ORDEM_POR_ACAO[Acao.RESTAURAR] == [
+            EstadoConversa.RESTAURAR_ESCOLHA,
+            EstadoConversa.RESTAURAR_CONFIRMACAO,
+        ]
 
 
 class TestProximoEstado:
@@ -127,6 +143,18 @@ class TestProximoEstado:
         assert conv.estado is EstadoConversa.REMOVER_NOME
         conv.estado = gerenciador.proximo_estado(conv)
         assert conv.estado is EstadoConversa.REMOVER_CONFIRMACAO
+        assert gerenciador.proximo_estado(conv) is None
+
+    def test_publicar_sequencia(self, gerenciador):
+        conv = gerenciador.iniciar(1, Acao.PUBLICAR)
+        assert conv.estado is EstadoConversa.PUBLICAR_CONFIRMACAO
+        assert gerenciador.proximo_estado(conv) is None
+
+    def test_restaurar_sequencia(self, gerenciador):
+        conv = gerenciador.iniciar(1, Acao.RESTAURAR)
+        assert conv.estado is EstadoConversa.RESTAURAR_ESCOLHA
+        conv.estado = gerenciador.proximo_estado(conv)
+        assert conv.estado is EstadoConversa.RESTAURAR_CONFIRMACAO
         assert gerenciador.proximo_estado(conv) is None
 
     def test_editar_apenas_nome(self, gerenciador):

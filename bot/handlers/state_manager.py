@@ -36,6 +36,11 @@ class EstadoConversa(Enum):
     REMOVER_CONFIRMACAO = "remover_confirmacao"
     # Buscar comunidade
     BUSCAR_NOME = "buscar_nome"
+    # Publicação
+    PUBLICAR_CONFIRMACAO = "publicar_confirmacao"
+    # Restauração de backup
+    RESTAURAR_ESCOLHA = "restaurar_escolha"
+    RESTAURAR_CONFIRMACAO = "restaurar_confirmacao"
     # Comuns a nova/editar
     PREVIEW = "preview"
     APROVACAO = "aprovacao"
@@ -48,6 +53,8 @@ class Acao(Enum):
     EDITAR = "editar"
     REMOVER = "remover"
     BUSCAR = "buscar"
+    PUBLICAR = "publicar"
+    RESTAURAR = "restaurar"
 
 
 # Escolha do que editar no estado EDITAR_ESCOLHA.
@@ -77,6 +84,11 @@ ORDEM_POR_ACAO: dict[Acao, list[EstadoConversa]] = {
         EstadoConversa.REMOVER_CONFIRMACAO,
     ],
     Acao.BUSCAR: [EstadoConversa.BUSCAR_NOME],
+    Acao.PUBLICAR: [EstadoConversa.PUBLICAR_CONFIRMACAO],
+    Acao.RESTAURAR: [
+        EstadoConversa.RESTAURAR_ESCOLHA,
+        EstadoConversa.RESTAURAR_CONFIRMACAO,
+    ],
 }
 
 
@@ -91,6 +103,7 @@ class ConversaUsuario:
     nome_original: str | None = None
     secao_alvo: str | None = None
     campo_editar: str | None = None
+    backup_escolhido: str | None = None
     iniciada_em: datetime | None = None
 
     def ativa(self) -> bool:
@@ -105,6 +118,7 @@ class ConversaUsuario:
         self.nome_original = None
         self.secao_alvo = None
         self.campo_editar = None
+        self.backup_escolhido = None
         self.iniciada_em = None
 
 

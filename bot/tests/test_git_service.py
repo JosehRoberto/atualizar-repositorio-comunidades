@@ -105,6 +105,14 @@ class TestExecucaoGit:
         with mock.patch("bot.services.git_service.subprocess.run", return_value=_ok(" M README.md\n")):
             assert service.status_limpo() is False
 
+    def test_alteracoes(self, service):
+        with mock.patch("bot.services.git_service.subprocess.run", return_value=_ok(" M README.md\n?? x\n")):
+            assert service.alteracoes() == [" M README.md", "?? x"]
+
+    def test_alteracoes_vazio(self, service):
+        with mock.patch("bot.services.git_service.subprocess.run", return_value=_ok("")):
+            assert service.alteracoes() == []
+
     def test_sincronizar_fetch_e_pull(self, service):
         with mock.patch.object(service, "fetch") as fetch, mock.patch.object(service, "pull_ff_only") as pull:
             service.sincronizar()

@@ -24,6 +24,7 @@ from telegram.ext import (
 )
 
 from bot.config import Config
+from bot.handlers import publicacao
 from bot.handlers.state_manager import (
     CAMPO_AMBOS,
     CAMPO_LINKS,
@@ -43,7 +44,7 @@ from bot.services.readme_service import (
     salvar_readme,
 )
 from bot.services.tempo import timestamp_belem
-from bot.services.validacao_service import validar_comunidade
+from bot.services.validacao_service import validar_comunidade, validar_readme
 
 logger = logging.getLogger(__name__)
 
@@ -598,6 +599,39 @@ async def cmd_listar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     await update.message.reply_text("\n".join(linhas), parse_mode="Markdown")
 
 
+async def cmd_validar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """🧩 Validar README — varredura completa, por severidade."""
+    if not _autorizado(update):
+        await update.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return
+    relatorio = validar_readme(carregar_readme(Config.README_PATH))
+    if not relatorio.problemas:
+        await update.message.reply_text("🧩 README íntegro — nenhum problema encontrado.")
+        return
+    linhas = [
+        f"🧩 Validação do README — {len(relatorio.erros)} erro(s), "
+        f"{len(relatorio.avisos)} aviso(s):"
+    ]
+    linhas += [f"• {problema}" for problema in relatorio.problemas[:40]]
+    await update.message.reply_text("\n".join(linhas))
+
+
+async def cmd_historico(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """📜 Histórico — últimas alterações registradas (JSONL)."""
+    if not _autorizado(update):
+        await update.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return
+    registros = historico_service.ler_historico(_historico_path())
+    if not registros:
+        await update.message.reply_text("📜 Nenhuma alteração registrada.")
+        return
+    linhas = ["📜 Últimas alterações:"]
+    for registro in reversed(registros[-10:]):
+        alvo = registro.comunidade or registro.backup_path or registro.commit or ""
+        linhas.append(f"• {registro.timestamp} — {registro.acao} — {alvo}")
+    await update.message.reply_text("\n".join(linhas))
+
+
 async def cancelar_fluxo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
     """Cancela o fluxo em andamento."""
     gerenciador.encerrar(update.effective_user.id)
@@ -606,27 +640,30 @@ async def cancelar_fluxo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 def montar_conversation_handler() -> ConversationHandler:
-    """Monta o `ConversationHandler` do fluxo conversacional."""
+    """Monta o `ConversationHandler` do fluxo conversacional (CRUD + publicação)."""
+    estados = {
+        EstadoConversa.NOVA_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, nova_nome)],
+        EstadoConversa.NOVA_LINKS: [MessageHandler(filters.TEXT & ~filters.COMMAND, nova_links)],
+        EstadoConversa.NOVA_SECAO: [MessageHandler(filters.TEXT & ~filters.COMMAND, nova_secao)],
+        EstadoConversa.EDITAR_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_nome)],
+        EstadoConversa.EDITAR_ESCOLHA: [CallbackQueryHandler(editar_escolha, pattern="^edit_(nome|links|ambos)$")],
+        EstadoConversa.EDITAR_NOVO_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_novo_nome)],
+        EstadoConversa.EDITAR_LINKS: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_links)],
+        EstadoConversa.REMOVER_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, remover_nome)],
+        EstadoConversa.REMOVER_CONFIRMACAO: [CallbackQueryHandler(remover_confirmacao, pattern="^rem_(ok|nao)$")],
+        EstadoConversa.BUSCAR_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, buscar_nome)],
+        EstadoConversa.APROVACAO: [CallbackQueryHandler(aprovacao, pattern=PADRAO_APROVACAO)],
+    }
+    estados.update(publicacao.estados_publicacao())
     return ConversationHandler(
         entry_points=[
             CommandHandler("nova", cmd_nova),
             CommandHandler("buscar", cmd_buscar),
             CommandHandler("editar", cmd_editar),
             CommandHandler("remover", cmd_remover),
+            *publicacao.entradas_publicacao(),
         ],
-        states={
-            EstadoConversa.NOVA_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, nova_nome)],
-            EstadoConversa.NOVA_LINKS: [MessageHandler(filters.TEXT & ~filters.COMMAND, nova_links)],
-            EstadoConversa.NOVA_SECAO: [MessageHandler(filters.TEXT & ~filters.COMMAND, nova_secao)],
-            EstadoConversa.EDITAR_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_nome)],
-            EstadoConversa.EDITAR_ESCOLHA: [CallbackQueryHandler(editar_escolha, pattern="^edit_(nome|links|ambos)$")],
-            EstadoConversa.EDITAR_NOVO_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_novo_nome)],
-            EstadoConversa.EDITAR_LINKS: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_links)],
-            EstadoConversa.REMOVER_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, remover_nome)],
-            EstadoConversa.REMOVER_CONFIRMACAO: [CallbackQueryHandler(remover_confirmacao, pattern="^rem_(ok|nao)$")],
-            EstadoConversa.BUSCAR_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, buscar_nome)],
-            EstadoConversa.APROVACAO: [CallbackQueryHandler(aprovacao, pattern=PADRAO_APROVACAO)],
-        },
+        states=estados,
         fallbacks=[
             CommandHandler("cancelar", cancelar_fluxo),
         ],
