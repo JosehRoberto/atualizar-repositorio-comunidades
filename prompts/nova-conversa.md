@@ -41,7 +41,7 @@ formatação Markdown existentes, com backup, preview, aprovação explícita e 
 | Repositório alvo (dados) | `https://gitlab.com/paralivre/comunidades-de-tecnologia-pa` (branch `master`) |
 | Clone local do alvo | `repositorio/` (repositório git aninhado, ignorado no git do projeto) |
 | Status atual | **MVP funcional — bot operacional** |
-| Versão | `v0.3.0` (tag anotada) |
+| Versão | `v0.4.0` (tag anotada) |
 | Python | Python 3.12 |
 | Biblioteca | `python-telegram-bot` 22.7 (v20+) |
 | Testes | **270** herméticos |

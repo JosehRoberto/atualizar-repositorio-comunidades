@@ -27,7 +27,8 @@
 
 ### Documentação (21/10/2026) — Consistência pós-`v0.4.0`
 
-- **Alterado:** `prompts/nova-conversa.md` — `v0.4.0` registrada como release em produção (§9).
+- **Alterado:** `prompts/nova-conversa.md` — `v0.4.0` registrada como release em produção (§9) e na
+  tabela de estado (Versão).
 - **Alterado:** `docs/planejamento-menu-comandos-telegram.md` — status/checklist refletem commit
   (`639f202`, `45aad75`) e tag `v0.4.0` publicados.
 - **Alterado:** `docs/planejamento-correcao-markdown-escape.md` e `README.md` — versão do PTB
