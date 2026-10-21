@@ -349,3 +349,43 @@ class TestAprovacaoSeguranca:
         assert any(
             escrita_service.MENSAGEM_OCUPADO in t for t, _ in update.callback_query.message.sent
         )
+
+
+class TestEscapeMarkdown:
+    """Correção do erro `Can't parse entities` (URL com `_` em Markdown v1)."""
+
+    def test_resumo_escapa_url_com_underscore(self):
+        texto = texto_resumo_comunidade(
+            Comunidade("Elug PA", [Link("Telegram", "https://t.me/elug_pa")])
+        )
+        assert "https://t.me/elug\\_pa" in texto
+
+    def test_preview_escapa_nome_e_secao_e_preserva_codigo(self):
+        conversa = ConversaUsuario(user_id=1)
+        conversa.acao = Acao.NOVA
+        conversa.rascunho = Comunidade("GruPy_Pará", [Link("Site", "https://t.me/grupy_pa")])
+        texto = texto_preview(conversa, "Linguagens_2026")
+        assert "GruPy\\_Pará" in texto
+        assert "Linguagens\\_2026" in texto
+        assert "**GruPy_Pará**" in texto
+
+    def test_persistir_nao_corrompe_readme(self, readme_path, tmp_path):
+        doc = parse_readme(README_FIXTURE)
+        conversa = ConversaUsuario(user_id=7)
+        conversa.acao = Acao.NOVA
+        conversa.secao_alvo = "Linguagens"
+        conversa.rascunho = Comunidade("GruPy_Pará", [Link("Telegram", "https://t.me/grupy_pa")])
+        resumo = aplicar_no_doc(doc, conversa)
+        persistir(
+            doc,
+            caminho=readme_path,
+            backup_dir=tmp_path / "backup",
+            historico_path=tmp_path / "h.jsonl",
+            usuario_id=7,
+            conversa=conversa,
+            resumo=resumo,
+        )
+        conteudo = readme_path.read_text(encoding="utf-8")
+        assert "GruPy_Pará" in conteudo
+        assert "\\" not in conteudo
+        assert "GruPy\\_Pará" in resumo

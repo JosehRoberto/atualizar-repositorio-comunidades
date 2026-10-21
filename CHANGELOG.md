@@ -5,6 +5,32 @@
 
 ## [Unreleased]
 
+### Corrigido (21/10/2026) — Escape Markdown nas mensagens do bot
+
+- **Corrigido:** `bot/handlers/menu.py` — escapa valores dinâmicos (nome de comunidade, seção e URL)
+  com `telegram.helpers.escape_markdown(version=1)` nas mensagens enviadas com
+  `parse_mode="Markdown"`; URLs com `_` (15 no README) quebravam o envio com
+  `Can't parse entities`. O escape é aplicado apenas **fora** de code span; os valores do modelo
+  permanecem intactos (README não é corrompido).
+- **Região protegida (§3.1):** `texto_preview` (preview/aprovação) — comentário
+  `# ALTERADO [21/10/2026]`.
+- **Testes:** +3 herméticos (`bot/tests/test_menu.py`) — URL com `_`, preview preservando code span
+  e persistência sem corromper o README. Suíte em **235**.
+- **Validado:** `py_compile` OK; `pytest bot/tests/` → **235 passed**.
+- **Arquivos:** `bot/handlers/menu.py`, `bot/tests/test_menu.py`.
+
+### Documentação (21/10/2026) — Planejamento de correção e prompts de planejamento/revisão de risco
+
+- **Adicionado:** `docs/planejamento-correcao-markdown-escape.md` (v1.1) — planejamento de correção
+  do erro `Can't parse entities`: diagnóstico (§14.1), causa raiz, correção proposta, análise de
+  riscos R1–R4 com testes de regressão e conformidade com o `AGENTS.md`.
+- **Adicionado:** `prompts/prompt-criacao-planejamento-correcao-bug.md`,
+  `prompts/prompt-criacao-planejamento-estrategico.md` e
+  `prompts/prompt-revisao-risco-planejamento.md` — prompts padronizados, adaptados à realidade e ao
+  contexto deste projeto.
+- **Arquivos:** `docs/planejamento-correcao-markdown-escape.md`, `prompts/prompt-criacao-planejamento-correcao-bug.md`,
+  `prompts/prompt-criacao-planejamento-estrategico.md`, `prompts/prompt-revisao-risco-planejamento.md`.
+
 ### Documentação (21/10/2026) — Handoff canônico refletido em `AGENTS.md` e no prompt
 
 - **Alterado:** `AGENTS.md §16` — passa a exigir manter o handoff canônico

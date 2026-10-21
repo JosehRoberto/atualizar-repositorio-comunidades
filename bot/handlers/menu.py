@@ -14,6 +14,7 @@ import logging
 from pathlib import Path
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.helpers import escape_markdown
 from telegram.ext import (
     CallbackQueryHandler,
     CommandHandler,
@@ -96,6 +97,11 @@ def _chat_id(update: Update) -> int:
 # ---------------------------------------------------------------------------
 
 
+def _md(texto) -> str:
+    """Escapa texto dinâmico para Markdown legado (v1) do Telegram."""
+    return escape_markdown(str(texto), version=1)
+
+
 def parse_links(texto: str) -> tuple[list[Link], list[str]]:
     """Converte linhas ``<Tipo> <URL>`` em `Link`s; devolve (links, linhas_invalidas)."""
     links: list[Link] = []
@@ -135,7 +141,7 @@ def texto_lista_secoes(doc) -> str:
     """Lista numerada de seções editáveis para o usuário escolher."""
     nomes = lista_secoes_editaveis(doc)
     linhas = ["📚 *Seções disponíveis:*"]
-    linhas += [f"{i}. {nome}" for i, nome in enumerate(nomes, start=1)]
+    linhas += [f"{i}. {_md(nome)}" for i, nome in enumerate(nomes, start=1)]
     linhas.append("\nEnvie o *número* correspondente.")
     return "\n".join(linhas)
 
@@ -177,8 +183,9 @@ def texto_preview(conversa, secao: str) -> str:
     comunidade = conversa.rascunho
     titulo = "nova comunidade" if conversa.acao is Acao.NOVA else "edição"
     linhas = [f"👀 *Pré-visualização* — {titulo}\n"]
-    linhas.append(f"*Nome:* {comunidade.nome}")
-    linhas.append(f"*Seção:* {secao}")
+    # ALTERADO [21/10/2026]: escapa nome/seção (fix Can't parse entities)
+    linhas.append(f"*Nome:* {_md(comunidade.nome)}")
+    linhas.append(f"*Seção:* {_md(secao)}")
     linhas.append("*Linha no README:*")
     linhas.append(f"`{render_linha(comunidade, marcada=True)}`")
     linhas.append("")
@@ -188,8 +195,8 @@ def texto_preview(conversa, secao: str) -> str:
 
 def texto_resumo_comunidade(comunidade: Comunidade) -> str:
     """Resumo em texto de uma comunidade (para listar/buscar)."""
-    links = ", ".join(f"{link.tipo} ({link.url})" for link in comunidade.links) or "sem links"
-    return f"• *{comunidade.nome}* — {links}"
+    links = ", ".join(f"{_md(link.tipo)} ({_md(link.url)})" for link in comunidade.links) or "sem links"
+    return f"• *{_md(comunidade.nome)}* — {links}"
 
 
 # ---------------------------------------------------------------------------
@@ -203,13 +210,13 @@ def aplicar_no_doc(doc, conversa) -> str:
     comunidade = conversa.rascunho
     if acao is Acao.NOVA:
         doc.inserir(conversa.secao_alvo, comunidade, marcar=True)
-        return f"✅ Inserida *{comunidade.nome}* em *{conversa.secao_alvo}*."
+        return f"✅ Inserida *{_md(comunidade.nome)}* em *{_md(conversa.secao_alvo)}*."
     if acao is Acao.EDITAR:
         doc.editar(conversa.nome_original, comunidade)
-        return f"✅ Editada *{comunidade.nome}*."
+        return f"✅ Editada *{_md(comunidade.nome)}*."
     if acao is Acao.REMOVER:
         doc.remover(conversa.nome_original)
-        return f"✅ Removida *{conversa.nome_original}*."
+        return f"✅ Removida *{_md(conversa.nome_original)}*."
     raise ValueError(f"ação inválida: {acao}")
 
 
@@ -366,7 +373,7 @@ async def editar_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Est
         ]
     )
     await update.message.reply_text(
-        f"✏️ Editando *{ocorrencia.comunidade.nome}*.\nO que deseja alterar?",
+        f"✏️ Editando *{_md(ocorrencia.comunidade.nome)}*.\nO que deseja alterar?",
         parse_mode="Markdown",
         reply_markup=teclado,
     )
@@ -449,7 +456,7 @@ async def remover_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Es
         ]]
     )
     await update.message.reply_text(
-        f"🗑️ Remover *{ocorrencia.comunidade.nome}* de *{ocorrencia.secao.nome}*?",
+        f"🗑️ Remover *{_md(ocorrencia.comunidade.nome)}* de *{_md(ocorrencia.secao.nome)}*?",
         parse_mode="Markdown",
         reply_markup=teclado,
     )
@@ -522,7 +529,7 @@ async def buscar_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Est
         gerenciador.encerrar(update.effective_user.id)
         return ConversationHandler.END
     await update.message.reply_text(
-        f"🔍 *{ocorrencia.comunidade.nome}* (seção *{ocorrencia.secao.nome}*)\n"
+        f"🔍 *{_md(ocorrencia.comunidade.nome)}* (seção *{_md(ocorrencia.secao.nome)}*)\n"
         + texto_resumo_comunidade(ocorrencia.comunidade),
         parse_mode="Markdown",
     )
@@ -619,8 +626,8 @@ async def cmd_listar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         ocorrencias = [oc for oc in doc.comunidades() if oc.secao.nome == secao.nome]
         if not ocorrencias:
             continue
-        linhas.append(f"\n*{secao.nome}* ({len(ocorrencias)})")
-        linhas += [f"• {oc.comunidade.nome}" for oc in ocorrencias]
+        linhas.append(f"\n*{_md(secao.nome)}* ({len(ocorrencias)})")
+        linhas += [f"• {_md(oc.comunidade.nome)}" for oc in ocorrencias]
     await update.message.reply_text("\n".join(linhas), parse_mode="Markdown")
 
 
