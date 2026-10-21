@@ -35,7 +35,8 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
 - Git: `main` sincronizada com `origin/main`.
   - `8af47a3` — estrutura inicial (docs, `AGENTS.md`, `.gitignore`, pastas).
   - `ec67e9e` — esqueleto do bot.
-  - Docs subsequentes: `e83f6fa`, `3d7e9fd`, `04125e9`, `33081da` (handoff, sincronização, segurança).
+  - Docs subsequentes: `e83f6fa`, `3d7e9fd`, `04125e9`, `33081da`, `dca05fd`
+    (handoff, sincronização, segurança).
 - `bot/`:
   - `config.py` — lê `.env` (`Config`, `validar()`), sem segredos hardcoded.
   - `main.py` — logging (silencia `httpx`/`httpcore`) + `run_polling`.
@@ -47,8 +48,10 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
   - `tests/` — 12 testes herméticos (config, modelo, schemas) **passando**.
 - Raiz: `pytest.ini`, `requirements-test.txt`, `README.md`, `bot/requirements.txt`,
   `bot/.env.example`.
-- `bot/.env` **existe** (não versionado): `GITLAB_TOKEN` (token `comunidades-bot`) já validado;
-  faltam `TELEGRAM_BOT_TOKEN` e `TELEGRAM_ALLOWED_USER_IDS`.
+- `bot/.env` **configurado** (não versionado): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`
+  (usuário `87681147`) e `GITLAB_TOKEN` (`comunidades-bot`) — `Config.validar()` sem problemas.
+- Bot **operacional**: `create_application()` monta a aplicação e o smoke test iniciou o polling sem
+  erros (bot `@atualizar_repositorio_bot`).
 - Segurança: rotação do token GitLab **concluída** (token antigo revogado; exposição local removida).
 - **Ainda não há** regras de negócio do README, serviços nem fluxo conversacional completo.
 
@@ -74,6 +77,8 @@ Implementar cada item **com teste hermético** antes de avançar:
    `rollback`/`/restaurar` (lista backups, diff, confirmação).
 8. **Multi-usuário/segurança** — `asyncio.Lock` por arquivo; `git pull --ff-only` antes de editar;
    recheck de hash antes de gravar.
+9. **Deploy local (systemd)** — criar `.venv` e a unit `bot/atualizar-repositorio-bot.service`
+   (instância única). O `bot/.env` já está configurado.
 
 ### Convenções obrigatórias (resumo)
 

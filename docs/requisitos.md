@@ -291,6 +291,6 @@ atualizar-repositorio-comunidades/
 6. Implementar `bot/handlers/state_manager.py` e os fluxos do Telegram (menu, preview, aprovação).
 7. Implementar a publicação (`/publicar`) e o rollback (`/restaurar`).
 8. Escrever testes de fluxo e manter a documentação atualizada.
-9. Configurar `bot/.env` e a unit systemd para deploy.
+9. Configurar a unit systemd para deploy (`bot/.env` já configurado).
 
 > Handoff detalhado para a próxima sessão: `docs/nova-sessao.md`.

@@ -5,6 +5,13 @@
 
 ## [Unreleased]
 
+### Documentação (21/10/2026) — Handoff reflete o bot operacional
+
+- **Alterado:** `docs/nova-sessao.md` — `bot/.env` completo e validado, bot operacional (smoke test),
+  lista de commits atualizada e novo item de deploy (systemd).
+- **Alterado:** `docs/requisitos.md §6` — item 9 passa a citar só a unit systemd (`.env` ok).
+- **Arquivos:** `docs/nova-sessao.md`, `docs/requisitos.md`.
+
 ### Documentação (21/10/2026) — `docs/nova-sessao.md` sincronizado
 
 - **Alterado:** `Estado atual` atualizado — commits de docs, `bot/.env` já existente (com
