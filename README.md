@@ -38,10 +38,16 @@ o `.env`.
 ## Comandos
 
 - `/start` — menu principal
+- `/nova` — cadastrar comunidade (nome → links → seção → preview → aprovação)
+- `/buscar` — buscar comunidade
+- `/editar` — editar comunidade (nome e/ou links)
+- `/remover` — remover comunidade
+- `/listar` — listar comunidades por seção
+- `/validar` — validar o README (tabelas, âncoras, duplicidades, marcador)
+- `/historico` — últimas alterações registradas
+- `/publicar` — commit + push (com confirmação explícita)
+- `/restaurar` — restaurar um backup (lista → diff → confirmação)
 - `/cancelar` — encerra a operação atual
-
-> As demais opções do menu (nova/buscar/editar/remover/listar, validar README, histórico e publicar)
-> serão implementadas conforme `docs/requisitos.md`.
 
 ## Uso
 
@@ -72,6 +78,16 @@ pytest bot/tests/ --cov=bot --cov-report=term-missing
 ```
 
 ## Deploy (systemd)
+
+Instalação (uma vez):
+
+```bash
+sudo cp bot/atualizar-repositorio-bot.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now atualizar-repositorio-bot.service
+```
+
+Operação:
 
 ```bash
 sudo systemctl restart atualizar-repositorio-bot.service && sleep 3

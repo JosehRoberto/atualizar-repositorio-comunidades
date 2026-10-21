@@ -311,5 +311,7 @@ atualizar-repositorio-comunidades/
      `asyncio.Lock` global, `git fetch` + `pull --ff-only` antes de gravar e recheck de hash do
      README (§2.12).
 9. Configurar a unit systemd para deploy (`bot/.env` já configurado).
+   - **Deploy systemd: concluído** (`bot/atualizar-repositorio-bot.service` + `.venv` com as
+     dependências); falta apenas a instalação da unit (passo `sudo` do usuário).
 
 > Handoff detalhado para a próxima sessão: `docs/nova-sessao.md`.

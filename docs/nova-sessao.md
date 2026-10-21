@@ -53,6 +53,7 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
   - `schemas/comunidade.py` — `ComunidadeSchema`, `LinkSchema` (pydantic v2, valida URL).
   - `services/` — implementados (região protegida): `readme_service`, `backup_service`,
     `historico_service`, `tempo`, `git_service`, `validacao_service` e `escrita_service`.
+  - `atualizar-repositorio-bot.service` — unit systemd (instância única).
   - `tests/` — **232** testes herméticos (config, modelo, schemas, serviços e fluxo) **passando**.
 - Raiz: `pytest.ini`, `requirements-test.txt`, `README.md`, `bot/requirements.txt`,
   `bot/.env.example`.
@@ -61,7 +62,8 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
 - Bot **operacional**: `create_application()` monta a aplicação e o smoke test iniciou o polling sem
   erros (bot `@atualizar_repositorio_bot`).
 - Segurança: rotação do token GitLab **concluída** (token antigo revogado; exposição local removida).
-- **Pendente:** deploy via systemd (criar `.venv` e a unit) — os itens 1–8 estão implementados.
+- **Pendente:** instalar a unit systemd (passos com `sudo`, ver `README.md §Deploy`). Os itens 1–9
+  estão implementados e testados (232 testes).
 
 ### Próximos passos (ordem recomendada)
 
@@ -89,8 +91,9 @@ Implementar cada item **com teste hermético** antes de avançar:
    (`bot/handlers/publicacao.py` + 25 testes). Inclui `/validar` e `/historico`.
 8. ✅ **Multi-usuário/segurança** — `asyncio.Lock` por arquivo; `git pull --ff-only` antes de editar;
    recheck de hash antes de gravar. **Concluído** (`bot/services/escrita_service.py` + 12 testes).
-9. **Deploy local (systemd)** — criar `.venv` e a unit `bot/atualizar-repositorio-bot.service`
-   (instância única). O `bot/.env` já está configurado. *← próximo*
+9. ✅ **Deploy local (systemd)** — `.venv` criada, dependências instaladas e unit
+   `bot/atualizar-repositorio-bot.service` (instância única) criada e validada
+   (`systemd-analyze verify`). Falta só instalar a unit (passo `sudo`).
 
 ### Convenções obrigatórias (resumo)
 
@@ -113,6 +116,6 @@ git status --short
 
 ### Ponto de entrada
 
-Comece pelo item 9 (deploy systemd) — os itens 1–8 já estão implementados. O `bot/.env` já está
-configurado; crie a `.venv`, instale `bot/requirements.txt` e a unit
-`bot/atualizar-repositorio-bot.service` (instância única).
+Os itens 1–9 estão implementados e testados (232 testes). Próximo passo: instalar a unit systemd
+(passos com `sudo` em `README.md §Deploy`) e, se desejado, criar tag anotada `v0.2.0` e publicar
+(push para `origin/main`).

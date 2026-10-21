@@ -5,6 +5,18 @@
 
 ## [Unreleased]
 
+### Adicionado (21/10/2026) — Deploy systemd (unit e `.venv`)
+
+- **Adicionado:** `bot/atualizar-repositorio-bot.service` — unit systemd (instância única,
+  `WorkingDirectory` no projeto, `ExecStart=.venv/bin/python -m bot.main`, `EnvironmentFile=bot/.env`,
+  `Restart=on-failure`).
+- **Alterado:** `README.md` — lista completa de comandos e passos de instalação/operação do serviço.
+- **Validado:** `systemd-analyze verify` sem erros; `.venv` criada e dependências instaladas
+  (`python-telegram-bot 22.8`); `create_application()` monta a aplicação na `.venv`; suíte em **232**.
+- **Pendente (requer `sudo`, usuário):** copiar a unit para `/etc/systemd/system/`, `daemon-reload` e
+  `enable --now`.
+- **Arquivos:** `bot/atualizar-repositorio-bot.service`, `README.md`.
+
 ### Adicionado (21/10/2026) — Concorrência e proteção de escrita (`escrita_service`)
 
 - **Adicionado:** `bot/services/escrita_service.py` (região protegida) — `asyncio.Lock` global de
