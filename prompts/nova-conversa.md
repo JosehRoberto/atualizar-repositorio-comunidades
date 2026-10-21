@@ -41,7 +41,7 @@ formatação Markdown existentes, com backup, preview, aprovação explícita e 
 | Repositório alvo (dados) | `https://gitlab.com/paralivre/comunidades-de-tecnologia-pa` (branch `master`) |
 | Clone local do alvo | `repositorio/` (repositório git aninhado, ignorado no git do projeto) |
 | Status atual | **MVP funcional — bot operacional** |
-| Versão | `v0.2.1` (tag anotada) |
+| Versão | `v0.3.0` (tag anotada) |
 | Python | Python 3.12 |
 | Biblioteca | `python-telegram-bot` 22.8 (v20+) |
 | Testes | **258** herméticos |
@@ -393,9 +393,10 @@ sudo systemctl enable --now atualizar-repositorio-bot.service
 
 ## 9. Próximos Passos
 
-1. ✅ **Unit systemd instalada e ativa** (instância única); `restart` efetivado — **v0.2.1 em produção**
+1. ✅ **Unit systemd instalada e ativa** (instância única); `restart` efetivado — **v0.3.0 em produção**
    (o commit **não** faz deploy; mudanças de código exigem `restart`).
-2. ✅ **Releases publicadas:** tags anotadas `v0.2.0` e `v0.2.1` criadas e **já publicadas** no `origin`.
+2. ✅ **Releases publicadas:** tags anotadas `v0.2.0`, `v0.2.1` e `v0.3.0` criadas e **já publicadas**
+   no `origin`.
 3. ✅ **Busca fuzzy (§2.10):** `busca_service` (match exato → `difflib` com limiar `0,6`) + lista
    numerada de candidatos; desempate por URL em nomes homônimos; testes em **258**.
 4. 🔜 **Criação de novas seções (§2.6):** âncora + título `## <emoji> <Título>` + tabela + atualização
@@ -450,7 +451,7 @@ enquanto o serviço roda.
 > `CHANGELOG.md`.
 
 **Últimas mudanças (resumo):**
-- **21/10/2026** — **Busca fuzzy**: `bot/services/busca_service.py` (exato → `difflib`, limiar `0,6`,
+- **21/10/2026** — **`v0.3.0` — Busca fuzzy**: `bot/services/busca_service.py` (exato → `difflib`, limiar `0,6`,
   até 5 candidatos, desempate por URL) integrado a `/buscar`, `/editar` e `/remover`, com estados
   `EDITAR_CANDIDATOS`/`REMOVER_CANDIDATOS`; **+23 testes** (suíte em **258**).
 - **21/10/2026** — **Fix `Can't parse entities`**: escape Markdown dos valores dinâmicos

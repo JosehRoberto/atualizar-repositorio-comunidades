@@ -5,6 +5,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-21
+
 ### Adicionado (21/10/2026) — Busca fuzzy com candidatos numerados (§2.10)
 
 - **Adicionado:** `bot/services/busca_service.py` — chave de busca sem acentos, emojis e pontuação;
