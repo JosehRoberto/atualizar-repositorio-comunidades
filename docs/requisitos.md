@@ -294,6 +294,8 @@ atualizar-repositorio-comunidades/
    - **Serviço de backup: concluído** (`bot/services/backup_service.py` + 20 testes herméticos).
    - **Serviço de histórico: concluído** (`bot/services/historico_service.py` + `tempo.py` + 15
      testes herméticos).
+   - **Serviço de validações: concluído** (`bot/services/validacao_service.py` + 50 testes
+     herméticos) — §2.8, incluindo `🧩 Validar README` e comparação de estrutura.
 6. Implementar `bot/handlers/state_manager.py` e os fluxos do Telegram (menu, preview, aprovação).
 7. Implementar a publicação (`/publicar`) e o rollback (`/restaurar`).
    - **Serviço Git/GitLab: concluído** (`bot/services/git_service.py` + 24 testes herméticos) —

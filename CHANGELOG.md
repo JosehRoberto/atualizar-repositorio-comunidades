@@ -5,6 +5,23 @@
 
 ## [Unreleased]
 
+### Adicionado (21/10/2026) — Serviço de validações (`validacao_service`)
+
+- **Adicionado:** `bot/services/validacao_service.py` (região protegida) — validações de §2.8:
+  campos obrigatórios (nome, ≥1 link), URLs válidas (`http`/`https`/`tg`; `normalizar_url` remove
+  espaços e exige esquema), duplicidade de **nome** e **URL** (bloqueia exata, alerta similaridade
+  ≥ 0,85), existência/editabilidade da seção e pendências do fluxo. Inclui **`validar_readme`**
+  (`🧩 Validar README`: integridade de tabelas, âncoras da navegação × seções, duplicidades, URLs
+  inválidas e coerência do marcador) e **`comparar_estrutura`** (garante edição cirúrgica).
+  Relatório por severidade (`erro`/`aviso`) com `Relatorio.ok`.
+- **Testes:** +50 herméticos (`bot/tests/test_validacao_service.py`) — URLs válidas/inválidas,
+  similares, duplicidades, seção não editável, varredura completa e comparação de estrutura.
+  Suíte em **147**.
+- **Validado:** `py_compile` OK; varredura real do `repositorio/README.md` → 2 erros legítimos
+  (URL do Discord repetida entre *AWS User Group Castanhal* e *XibéSec*; 9 comunidades marcadas),
+  zero falsos positivos; `pytest bot/tests/` → **147 passed**.
+- **Arquivos:** `bot/services/validacao_service.py`, `bot/tests/test_validacao_service.py`.
+
 ### Adicionado (21/10/2026) — Serviço Git/GitLab (`git_service`)
 
 - **Adicionado:** `bot/services/git_service.py` (região protegida) — `GitService` com

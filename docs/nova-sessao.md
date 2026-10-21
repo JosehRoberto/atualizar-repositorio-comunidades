@@ -44,8 +44,9 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
     `TELEGRAM_ALLOWED_USER_IDS`, error handler.
   - `models/comunidade.py` — `Comunidade`, `Link`, `nome_normalizado()` (minúsculas, sem acentos).
   - `schemas/comunidade.py` — `ComunidadeSchema`, `LinkSchema` (pydantic v2, valida URL).
-  - `services/` — vazio (a implementar).
-  - `tests/` — 12 testes herméticos (config, modelo, schemas) **passando**.
+  - `services/` — implementados (região protegida): `readme_service`, `backup_service`,
+    `historico_service`, `tempo`, `git_service` e `validacao_service`.
+  - `tests/` — 147 testes herméticos (config, modelo, schemas e serviços) **passando**.
 - Raiz: `pytest.ini`, `requirements-test.txt`, `README.md`, `bot/requirements.txt`,
   `bot/.env.example`.
 - `bot/.env` **configurado** (não versionado): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`
@@ -53,26 +54,28 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
 - Bot **operacional**: `create_application()` monta a aplicação e o smoke test iniciou o polling sem
   erros (bot `@atualizar_repositorio_bot`).
 - Segurança: rotação do token GitLab **concluída** (token antigo revogado; exposição local removida).
-- **Ainda não há** regras de negócio do README, serviços nem fluxo conversacional completo.
+- **Ainda não há** o fluxo conversacional completo (`state_manager.py` + handlers do menu).
 
 ### Próximos passos (ordem recomendada)
 
 Implementar cada item **com teste hermético** antes de avançar:
 
-1. **Serviço de parser/editor do README** — `bot/services/readme_service.py`
+1. ✅ **Serviço de parser/editor do README** — `bot/services/readme_service.py`
    (região protegida): parsear seções/âncoras, linhas `| Comunidade | Links |` e as exceções
    (`Observatório` usa `| Serviço | Link |`), badges `shields.io`, inserir/editar/remover bloco,
    **ordem alfabética** por `nome_normalizado()`, e normalização do marcador
    `:triangular_flag_on_post:` (no máximo 1; referência inicial: **Divas Digitais**).
-   Formato do bloco e catálogo de badges: `docs/requisitos.md` §2.4–2.6.
-2. **Serviço de backup** — `bot/services/backup_service.py` (pré-condição de escrita):
-   `backup/README_YYYYMMDD_HHMMSS.bak` (fuso `America/Belem`).
-3. **Serviço de histórico** — `bot/services/historico_service.py` (JSONL append-only).
-4. **Serviço Git/GitLab** — `bot/services/git_service.py`: commit/branch/push/MR via `GITLAB_TOKEN`,
-   **sem** embutir token em URL; mockar `requests`/`subprocess` nos testes.
-5. **Validações** — `🧩 Validar README` e duplicidade (nome/URL): `docs/requisitos.md` §2.8.
+   Formato do bloco e catálogo de badges: `docs/requisitos.md` §2.4–2.6. **Concluído** (26 testes).
+2. ✅ **Serviço de backup** — `bot/services/backup_service.py` (pré-condição de escrita):
+   `backup/README_YYYYMMDD_HHMMSS.bak` (fuso `America/Belem`). **Concluído** (20 testes).
+3. ✅ **Serviço de histórico** — `bot/services/historico_service.py` (JSONL append-only).
+   **Concluído** (15 testes; inclui `bot/services/tempo.py`).
+4. ✅ **Serviço Git/GitLab** — `bot/services/git_service.py`: commit/branch/push/MR via `GITLAB_TOKEN`,
+   **sem** embutir token em URL; mockar `requests`/`subprocess` nos testes. **Concluído** (24 testes).
+5. ✅ **Validações** — `🧩 Validar README` e duplicidade (nome/URL): `docs/requisitos.md` §2.8.
+   **Concluído** (`bot/services/validacao_service.py`, 50 testes).
 6. **Fluxo conversacional** — `bot/handlers/state_manager.py` (ordem dos estados) + handlers do menu
-   (nova/buscar/editar/remover/listar) com **preview** e **aprovação** (`✅/✏️/🔀/❌`).
+   (nova/buscar/editar/remover/listar) com **preview** e **aprovação** (`✅/✏️/🔀/❌`). *← próximo*
 7. **Publicação** — `/publicar` como etapa separada, **somente com confirmação explícita**;
    `rollback`/`/restaurar` (lista backups, diff, confirmação).
 8. **Multi-usuário/segurança** — `asyncio.Lock` por arquivo; `git pull --ff-only` antes de editar;
