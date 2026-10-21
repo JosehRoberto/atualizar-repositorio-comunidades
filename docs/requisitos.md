@@ -296,6 +296,8 @@ atualizar-repositorio-comunidades/
      testes herméticos).
 6. Implementar `bot/handlers/state_manager.py` e os fluxos do Telegram (menu, preview, aprovação).
 7. Implementar a publicação (`/publicar`) e o rollback (`/restaurar`).
+   - **Serviço Git/GitLab: concluído** (`bot/services/git_service.py` + 24 testes herméticos) —
+     base para commit/push/MR da publicação.
 8. Escrever testes de fluxo e manter a documentação atualizada.
 9. Configurar a unit systemd para deploy (`bot/.env` já configurado).
 

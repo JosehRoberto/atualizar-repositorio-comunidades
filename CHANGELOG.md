@@ -5,6 +5,20 @@
 
 ## [Unreleased]
 
+### Adicionado (21/10/2026) — Serviço Git/GitLab (`git_service`)
+
+- **Adicionado:** `bot/services/git_service.py` (região protegida) — `GitService` com
+  `fetch`/`pull --ff-only` (sincronização, §2.12), `commit` (define autor), `criar_branch`, `push`
+  via URL autenticada montada **em runtime** (token **fora** do remote, `credential.helper=`) e
+  `criar_merge_request` pela API v4 (header `PRIVATE-TOKEN`). Helpers de hash
+  (`hash_conteudo`/`hash_arquivo`) para recheck antes de gravar. Token **mascarado** em erros;
+  `subprocess`/`requests` isoláveis por mock.
+- **Testes:** +24 herméticos (`bot/tests/test_git_service.py`) — URL autenticada/escape, hashes,
+  execução Git, commit/branch/push e Merge Request (API), além dos caminhos de erro.
+  `subprocess`/`requests` mockados. Suíte em **97**.
+- **Validado:** `py_compile` OK; `pytest bot/tests/` → **97 passed**.
+- **Arquivos:** `bot/services/git_service.py`, `bot/tests/test_git_service.py`.
+
 ### Adicionado (21/10/2026) — Serviço de histórico e utilitário de tempo
 
 - **Adicionado:** `bot/services/historico_service.py` — registro **JSONL append-only**
