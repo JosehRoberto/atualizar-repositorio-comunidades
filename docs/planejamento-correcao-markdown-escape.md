@@ -91,7 +91,7 @@ Diagnóstico confirmado (§14.1); revisão de risco R1–R4 incorporada (§12); 
   | `cmd_listar` (l.622-623) | nome/seção | |
 
 - `bot/handlers/publicacao.py` **não muda** (ver §3).
-- **Dependência:** `telegram.helpers.escape_markdown` (já disponível em `python-telegram-bot` 22.8;
+- **Dependência:** `telegram.helpers.escape_markdown` (já disponível em `python-telegram-bot` 22.7;
   sem nova dependência).
 
 ---
@@ -229,7 +229,7 @@ regressão.
 
 ## Dependências e Edge Cases
 
-- **Dependências:** `telegram.helpers.escape_markdown` (já presente em PTB 22.8); nenhuma nova
+- **Dependências:** `telegram.helpers.escape_markdown` (já presente em PTB 22.7); nenhuma nova
   dependência externa; sem alteração de `requirements.txt`.
 - **Edge cases:**
   - Code span/fenced permanecem **sem** escape (senão a barra invertida apareceria literal).

@@ -25,6 +25,16 @@
   sem `409`/erros.
 - **Arquivos:** `bot/handlers/commands.py`, `bot/tests/test_commands.py`.
 
+### Documentação (21/10/2026) — Consistência pós-`v0.4.0`
+
+- **Alterado:** `prompts/nova-conversa.md` — `v0.4.0` registrada como release em produção (§9).
+- **Alterado:** `docs/planejamento-menu-comandos-telegram.md` — status/checklist refletem commit
+  (`639f202`, `45aad75`) e tag `v0.4.0` publicados.
+- **Alterado:** `docs/planejamento-correcao-markdown-escape.md` e `README.md` — versão do PTB
+  alinhada para 22.7 e nota do menu nativo de comandos no `README`.
+- **Arquivos:** `README.md`, `docs/planejamento-menu-comandos-telegram.md`,
+  `docs/planejamento-correcao-markdown-escape.md`, `prompts/nova-conversa.md`.
+
 ## [0.3.0] - 2026-10-21
 
 ### Adicionado (21/10/2026) — Busca fuzzy com candidatos numerados (§2.10)

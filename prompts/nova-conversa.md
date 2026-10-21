@@ -396,10 +396,11 @@ sudo systemctl enable --now atualizar-repositorio-bot.service
 
 ## 9. Próximos Passos
 
-1. ✅ **Unit systemd instalada e ativa** (instância única); `restart` efetivado — **v0.3.0 em produção**
-   (o commit **não** faz deploy; mudanças de código exigem `restart`).
-2. ✅ **Releases publicadas:** tags anotadas `v0.2.0`, `v0.2.1` e `v0.3.0` criadas e **já publicadas**
-   no `origin`.
+1. ✅ **Unit systemd instalada e ativa** (instância única); `restart` efetivado — **`v0.4.0` em
+   produção** (menu nativo de comandos; §3). O commit **não** faz deploy: mudanças de código exigem
+   `restart`.
+2. ✅ **Releases publicadas:** tags anotadas `v0.2.0`, `v0.2.1`, `v0.3.0` e `v0.4.0` criadas e **já
+   publicadas** no `origin`.
 3. ✅ **Busca fuzzy (§2.10):** `busca_service` (match exato → `difflib` com limiar `0,6`) + lista
    numerada de candidatos; desempate por URL em nomes homônimos; testes em **258**.
 4. 🔜 **Criação de novas seções (§2.6):** âncora + título `## <emoji> <Título>` + tabela + atualização

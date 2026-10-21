@@ -49,6 +49,9 @@ o `.env`.
 - `/restaurar` — restaurar um backup (lista → diff → confirmação)
 - `/cancelar` — encerra a operação atual
 
+Todos os comandos também aparecem no **menu nativo do Telegram** (botão «Menu», à esquerda do campo
+de digitação), registrado no boot via `set_my_commands`.
+
 ## Uso
 
 ```bash

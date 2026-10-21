@@ -4,7 +4,7 @@
 **Versão:** 1.1
 **Foco:** `bot/handlers/commands.py` (registro do menu nativo de comandos)
 **Status:** **implementado, validado e em produção** (270 testes; `py_compile` + import OK; restart
-systemd efetivado — R7 concluído). Pendente apenas **commit/tag** sob autorização (§12.1).
+systemd efetivado — R7 concluído). **Commit (`639f202`, `45aad75`) e tag `v0.4.0` publicados no `origin`.**
 **Revisão de risco incorporada** (R1–R9; `prompts/prompt-revisao-risco-planejamento.md`).
 
 ---
@@ -189,7 +189,7 @@ async def post_init(application: Application) -> None:
 - [x] **Validação (Seção 9):** `py_compile` + import + `pytest bot/tests/ -v` → **270 passed**.
 - [x] **Planejamento/aprovação (Seção 10):** aprovado pelo usuário; implementado.
 - [x] **Checklist (Seção 11):** pré/pós alteração.
-- [ ] **Git/commit (Seção 12):** mensagem sugerida em §9; commit/tag sob autorização.
+- [x] **Git/commit (Seção 12):** mensagem sugerida em §9; commit/tag concluídos (`639f202`, `45aad75`, `v0.4.0`).
 - [x] **Deploy (Seção 13):** restart via systemd efetivado (R7 concluído); instância única.
 - [x] **Documentação (Seções 15/16):** `CHANGELOG.md` + `prompts/nova-conversa.md`.
 - [x] **Riscos:** R1–R3 (alta/média) e R8–R9 (baixas com teste) viram requisitos de aceite (§7).
@@ -271,7 +271,7 @@ Dimensões do *Prompt de Revisão de Risco*. Riscos alta/média → **REQUISITO 
 - [x] Validação: Seção 9 — `py_compile` + import + `pytest` → **270 passed** (§4)
 - [x] Planejamento (aprovação): Seção 10 — aprovado; implementado
 - [x] Checklist: Seção 11 — pré/pós alteração
-- [ ] Git/commit: Seção 12 — mensagem em §9; commit/tag sob autorização
+- [x] Git/commit: Seção 12 — mensagem em §9; commit/tag concluídos (`639f202`, `45aad75`, `v0.4.0`)
 - [x] Deploy/systemd: Seção 13 — restart efetivado (R7 concluído); log "Comandos registrados no menu"; instância única
 - [x] Documentação: Seções 15 e 16 — `CHANGELOG.md` + `prompts/nova-conversa.md` (R9)
 - [x] Análise de Riscos: R1–R3 e R8–R9 com teste de regressão — §7
@@ -289,7 +289,7 @@ Dimensões do *Prompt de Revisão de Risco*. Riscos alta/média → **REQUISITO 
   ficava vazio. Registra BotCommand no post_init (fonte única COMANDOS_MENU),
   com tratamento de falha de rede para não derrubar o polling.
   ```
-- **Tag (§12.6):** sugerir `v0.4.0` após validação (feature nova).
+- **Tag (§12.6):** `v0.4.0` criada (anotada) e publicada no `origin`.
 
 ---
 
