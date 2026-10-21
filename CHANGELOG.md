@@ -5,6 +5,20 @@
 
 ## [Unreleased]
 
+### v0.1.0 (21/10/2026) — Estrutura inicial e esqueleto do bot
+
+- **Adicionado:** commit inicial do projeto (`8af47a3`) — `.gitignore`, `AGENTS.md`, `CHANGELOG.md`,
+  `docs/` e estrutura base (`bot/`, `backup/`, `docs/`).
+- **Adicionado:** esqueleto do bot em `bot/` — `config.py` (lê `.env`), `main.py`,
+  `handlers/commands.py` (`create_application()` + `/start` e `/cancelar`), `models/comunidade.py`
+  (nome + links, com chave normalizada), `schemas/comunidade.py` (pydantic v2), `services/` e `tests/`.
+- **Adicionado:** `bot/requirements.txt`, `bot/.env.example`, `pytest.ini`, `requirements-test.txt`
+  e `README.md` do projeto.
+- **Testes:** 12 (config, modelo de domínio e schemas) — herméticos, sem rede nem `.env` real.
+- **Validado:** `py_compile` OK; `from bot.handlers.commands import create_application` OK;
+  `pytest bot/tests/` → **12 passed**.
+- **Arquivos:** `bot/**`, `pytest.ini`, `requirements-test.txt`, `README.md`.
+
 ### Skill (21/10/2026) — `eval-3` discriminante (iteration-2)
 
 - **Alterado:** `eval-3` da skill `criacao-bot-telegram` reescrito (prompt menos prescritivo e
