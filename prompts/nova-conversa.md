@@ -440,14 +440,14 @@ enquanto o serviço roda.
 > `CHANGELOG.md`.
 
 **Últimas mudanças (resumo):**
+- **21/10/2026** — **Handoff canônico** (`f9f59ab`): adicionado `prompts/nova-conversa.md`;
+  `docs/requisitos.md`, `README.md` e `docs/nova-sessao.md` passam a apontar para ele
+  (`nova-sessao.md` marcado como histórico).
 - **21/10/2026** — **`v0.2.0`** (CHANGELOG preparado para a release): `bot/main.py` silencia o
   `PTBUserWarning` esperado; unit systemd (`bot/atualizar-repositorio-bot.service`) e `.venv`
   validados; **232 testes**.
 - **21/10/2026** — **`escrita_service`** (região protegida): `asyncio.Lock` global, `sincronizar_seguro`
   (`fetch` + `pull --ff-only`) e `conferir_hash` antes de gravar (§2.12); **+12 testes** (suíte em 232).
-- **21/10/2026** — **`publicacao`** (região protegida): `/publicar` (commit + push com confirmação) e
-  `/restaurar` (lista → diff → confirmação → backup prévio), além de `/validar` e `/historico`;
-  **+25 testes** (suíte na época em 220).
 
 ---
 *Projeto: Atualização do Repositório de Comunidades | Mantenedor: José Roberto*

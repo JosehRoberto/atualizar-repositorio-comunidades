@@ -343,6 +343,8 @@ Ao final de cada sessão, produzir um resumo estruturado (pt-BR):
 - [por onde retomar]
 ```
 
+- Manter o handoff canônico **`prompts/nova-conversa.md`** atualizado (estado atual, fluxo,
+  próximos passos); `docs/nova-sessao.md` fica como histórico da fase de construção.
 - Sugerir a mensagem de commit (§12.4) **após** atualizar a documentação, sem commitar sozinho.
 
 ---

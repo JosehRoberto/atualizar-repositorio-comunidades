@@ -5,6 +5,14 @@
 
 ## [Unreleased]
 
+### Documentação (21/10/2026) — Handoff canônico refletido em `AGENTS.md` e no prompt
+
+- **Alterado:** `AGENTS.md §16` — passa a exigir manter o handoff canônico
+  `prompts/nova-conversa.md` atualizado (`docs/nova-sessao.md` permanece como histórico).
+- **Alterado:** `prompts/nova-conversa.md` — a seção "Últimas mudanças (resumo)" inclui o commit do
+  handoff (`f9f59ab`) e mantém as 3 atualizações mais recentes.
+- **Arquivos:** `AGENTS.md`, `prompts/nova-conversa.md`.
+
 ### Documentação (21/10/2026) — Prompt de continuidade canônico (`prompts/nova-conversa.md`)
 
 - **Adicionado:** `prompts/nova-conversa.md` — handoff canônico para abrir uma nova sessão do
