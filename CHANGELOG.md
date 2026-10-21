@@ -5,6 +5,14 @@
 
 ## [Unreleased]
 
+### Segurança (21/10/2026) — Exposição local do token GitLab removida
+
+- **Segurança:** token removido de `~/.git-credentials` (backup com permissão `600`) e da URL do
+  remote do clone antigo (`~/projetos/paralivre/comunidades-de-tecnologia-pa`). `bot/.env` criado
+  (ignorado pelo git).
+- **Pendente:** revogar o token antigo no GitLab e cadastrar o novo (scope `api`) em `bot/.env`.
+- **Arquivos:** `docs/requisitos.md` (§3 item 4).
+
 ### Documentação (21/10/2026) — `docs/requisitos.md` sincronizado
 
 - **Alterado:** `§6 Próximos passos` atualizado (concluído vs. em andamento, com os commits).

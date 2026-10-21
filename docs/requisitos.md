@@ -222,7 +222,9 @@ Itens **resolvidos** com as definições do projeto e itens **em aberto** abaixo
 3. **Clone único (resolvido):** `repositorio/` é o único clone gerenciado pelo bot. O clone antigo
    em `/home/roberto/projetos/paralivre/comunidades-de-tecnologia-pa` fica descontinuado e fora do
    fluxo.
-4. **Token GitLab:** rotacionar o token exposto e cadastrar o novo em `.env`.
+4. **Token GitLab (parcial):** exposição local **removida** (token excluído de `~/.git-credentials`
+   e da URL do remote do clone antigo). **Pendente:** revogar o token antigo no GitLab, criar um novo
+   (scope `api`) e cadastrá-lo em `bot/.env` (`GITLAB_TOKEN`).
 
 ---
 
