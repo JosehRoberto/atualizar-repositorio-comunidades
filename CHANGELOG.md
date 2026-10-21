@@ -5,6 +5,26 @@
 
 ## [Unreleased]
 
+### v0.4.0 (21/10/2026) — Menu nativo de comandos do Telegram
+
+- **Adicionado:** `bot/handlers/commands.py` — constante `COMANDOS_MENU` (fonte única) e `post_init`,
+  que registra o **menu nativo de comandos** do Telegram via
+  `bot.set_my_commands([BotCommand(...)])`; o botão "Menu" (à esquerda do campo de digitação) passa a
+  listar todos os comandos do bot.
+- **Alterado:** `bot/handlers/commands.py` — o texto do `/start` (`MENU`) agora é **derivado** de
+  `COMANDOS_MENU` (elimina duplicação); `create_application()` registra o `post_init` **uma única vez**
+  no builder.
+- **Região protegida (§3.1):** `create_application()` — comentário `# ALTERADO [21/10/2026]`; nenhum
+  handler novo, ordem de registro preservada.
+- **Robustez:** falha de rede em `set_my_commands` no boot é capturada (`try/except`) e **não**
+  derruba o polling.
+- **Testes:** +12 herméticos (`bot/tests/test_commands.py`; `set_my_commands` mockado). Suíte em **270**.
+- **Validado:** `py_compile` OK; import de `create_application` OK; `pytest bot/tests/` → **270 passed**.
+- **Planejamento:** `docs/planejamento-menu-comandos-telegram.md` (v1.1, riscos R1–R9).
+- **Validado em produção:** restart systemd efetivado; log `Comandos registrados no menu do Telegram`;
+  sem `409`/erros.
+- **Arquivos:** `bot/handlers/commands.py`, `bot/tests/test_commands.py`.
+
 ## [0.3.0] - 2026-10-21
 
 ### Adicionado (21/10/2026) — Busca fuzzy com candidatos numerados (§2.10)

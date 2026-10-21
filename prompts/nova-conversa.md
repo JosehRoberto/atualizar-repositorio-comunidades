@@ -43,8 +43,8 @@ formatação Markdown existentes, com backup, preview, aprovação explícita e 
 | Status atual | **MVP funcional — bot operacional** |
 | Versão | `v0.3.0` (tag anotada) |
 | Python | Python 3.12 |
-| Biblioteca | `python-telegram-bot` 22.8 (v20+) |
-| Testes | **258** herméticos |
+| Biblioteca | `python-telegram-bot` 22.7 (v20+) |
+| Testes | **270** herméticos |
 
 **Escopo do cadastro (schema real do README):**
 - Cada comunidade tem **apenas `nome` + `links`** (`| Comunidade | Links |`) — sem cidade,
@@ -83,6 +83,7 @@ atualizar-repositorio-comunidades/
 │   ├── atualizar-repositorio-bot.service ← unit systemd (instância única)
 │   ├── handlers/
 │   │   ├── commands.py                ← `create_application()` + `/start`, `/cancelar`, menu
+│   │   │                                 nativo de comandos (`COMANDOS_MENU` + `post_init`)
 │   │   ├── state_manager.py           ← máquina de estados (PROTEGIDA): EstadoConversa, Acao,
 │   │   │                                 ConversaUsuario, GerenciadorEstado, ORDEM_POR_ACAO
 │   │   ├── menu.py                     ← fluxos nova/editar/remover/buscar + preview/aprovação;
@@ -102,13 +103,13 @@ atualizar-repositorio-comunidades/
 │   │   ├── busca_service.py            ← match exato/fuzzy + candidatos (§2.10)
 │   │   └── escrita_service.py         ← `asyncio.Lock` + sync + recheck de hash (§2.12)
 │   ├── history/                        ← `historico.jsonl` (não versionado)
-│   └── tests/                          ← pytest (258 testes herméticos)
+│   └── tests/                          ← pytest (270 testes herméticos)
 │       ├── conftest.py
 │       ├── test_config.py, test_models.py, test_schemas.py
 │       ├── test_readme_service.py, test_backup_service.py, test_historico_service.py
 │       ├── test_validacao_service.py, test_busca_service.py, test_git_service.py,
 │       │   test_escrita_service.py
-│       └── test_state_manager.py, test_menu.py, test_publicacao.py
+│       └── test_state_manager.py, test_menu.py, test_publicacao.py, test_commands.py
 ├── repositorio/                        ← clone do repositório alvo (GitLab) — ignorado no git
 │   ├── README.md                       ← alvo das edições do bot (fonte da verdade)
 │   └── LICENSE                         ← preservar (não editar)
@@ -164,6 +165,8 @@ atualizar-repositorio-comunidades/
   **somente após confirmação explícita**, faz `commit` + `push`) e `/restaurar` (lista backups →
   **diff** → confirmação → backup prévio). Ambos registram no histórico.
 - **Consulta**: `/listar`, `/validar` e `/historico`.
+- **Menu nativo de comandos**: `bot.set_my_commands` registrado no `post_init` (via
+  `create_application()`), populando o botão "Menu" do app; `COMANDOS_MENU` é fonte única do `/start`.
 - **Guard de segurança**: `TELEGRAM_ALLOWED_USER_IDS` em todos os handlers.
 - **Segurança**: logging `httpx`/`httpcore` em `WARNING` (token do bot não vaza) e `PTBUserWarning`
   esperado silenciado em `main.py`.
@@ -451,6 +454,11 @@ enquanto o serviço roda.
 > `CHANGELOG.md`.
 
 **Últimas mudanças (resumo):**
+- **21/10/2026** — **Menu nativo de comandos** (pré-`v0.4.0`): `COMANDOS_MENU` (fonte única) +
+  `post_init` registram `set_my_commands` no boot; `/start` deriva o texto da mesma lista; falha de
+  rede não derruba o polling. **+12 testes** (`bot/tests/test_commands.py`); suíte em **270**.
+  Planejamento em `docs/planejamento-menu-comandos-telegram.md` (v1.1, riscos R1–R9).
+  **Em produção:** restart systemd efetivado.
 - **21/10/2026** — **`v0.3.0` — Busca fuzzy**: `bot/services/busca_service.py` (exato → `difflib`, limiar `0,6`,
   até 5 candidatos, desempate por URL) integrado a `/buscar`, `/editar` e `/remover`, com estados
   `EDITAR_CANDIDATOS`/`REMOVER_CANDIDATOS`; **+23 testes** (suíte em **258**).
