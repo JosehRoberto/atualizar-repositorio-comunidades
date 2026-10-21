@@ -5,6 +5,14 @@
 
 ## [Unreleased]
 
+### Corrigido (21/10/2026) — `PTBUserWarning` no log do serviço
+
+- **Corrigido:** `bot/main.py` — silencia (de forma específica) o `PTBUserWarning` esperado ao
+  misturar `MessageHandler` e `CallbackQueryHandler` no `ConversationHandler` (`per_message=False`),
+  mantendo o log do serviço limpo.
+- **Validado:** `create_application()` sem o aviso; `pytest bot/tests/` → **232 passed**.
+- **Arquivos:** `bot/main.py`.
+
 ### Adicionado (21/10/2026) — Deploy systemd (unit e `.venv`)
 
 - **Adicionado:** `bot/atualizar-repositorio-bot.service` — unit systemd (instância única,

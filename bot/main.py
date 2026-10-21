@@ -1,6 +1,9 @@
 """Ponto de entrada do bot."""
 
 import logging
+import warnings
+
+from telegram.warnings import PTBUserWarning
 
 from bot.config import Config
 from bot.handlers.commands import create_application
@@ -14,6 +17,12 @@ def configurar_logging() -> None:
     )
     for ruidoso in ("httpx", "httpcore", "telegram.request"):
         logging.getLogger(ruidoso).setLevel(logging.WARNING)
+    # Esperado ao misturar MessageHandler e CallbackQueryHandler (per_message=False).
+    warnings.filterwarnings(
+        "ignore",
+        message="If 'per_message=False', 'CallbackQueryHandler' will not be tracked",
+        category=PTBUserWarning,
+    )
 
 
 def main() -> None:
