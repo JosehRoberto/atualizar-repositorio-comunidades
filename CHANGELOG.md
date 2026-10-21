@@ -5,6 +5,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-21
+
 ### Corrigido (21/10/2026) — `PTBUserWarning` no log do serviço
 
 - **Corrigido:** `bot/main.py` — silencia (de forma específica) o `PTBUserWarning` esperado ao
