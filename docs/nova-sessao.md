@@ -97,7 +97,7 @@ Implementar cada item **com teste hermético** antes de avançar:
    recheck de hash antes de gravar. **Concluído** (`bot/services/escrita_service.py` + 12 testes).
 9. ✅ **Deploy local (systemd)** — `.venv` criada, dependências instaladas e unit
    `bot/atualizar-repositorio-bot.service` (instância única) criada e validada
-   (`systemd-analyze verify`). Falta só instalar a unit (passo `sudo`).
+   (`systemd-analyze verify`); unit **instalada e ativa** (após mudanças de código, `restart`).
 
 ### Convenções obrigatórias (resumo)
 
