@@ -37,6 +37,8 @@ class TestConversaUsuario:
         conv.nome_original = "X"
         conv.secao_alvo = "Linguagens"
         conv.campo_editar = CAMPO_NOME
+        conv.backup_escolhido = "backup/README_x.bak"
+        conv.hash_base = "abc"
         conv.reset()
         assert conv.estado is EstadoConversa.IDLE
         assert conv.acao is None
@@ -44,6 +46,8 @@ class TestConversaUsuario:
         assert conv.nome_original is None
         assert conv.secao_alvo is None
         assert conv.campo_editar is None
+        assert conv.backup_escolhido is None
+        assert conv.hash_base is None
         assert conv.iniciada_em is None
 
 

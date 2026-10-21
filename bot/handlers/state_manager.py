@@ -104,6 +104,7 @@ class ConversaUsuario:
     secao_alvo: str | None = None
     campo_editar: str | None = None
     backup_escolhido: str | None = None
+    hash_base: str | None = None
     iniciada_em: datetime | None = None
 
     def ativa(self) -> bool:
@@ -119,6 +120,7 @@ class ConversaUsuario:
         self.secao_alvo = None
         self.campo_editar = None
         self.backup_escolhido = None
+        self.hash_base = None
         self.iniciada_em = None
 
 

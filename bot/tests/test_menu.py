@@ -10,7 +10,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from telegram.ext import ConversationHandler
 
+from bot.config import Config
+from bot.handlers import menu
 from bot.handlers.menu import (
     CB_CANCELAR,
     CB_EDITAR,
@@ -26,9 +29,9 @@ from bot.handlers.menu import (
     texto_preview,
     texto_resumo_comunidade,
 )
-from bot.handlers.state_manager import Acao, ConversaUsuario
+from bot.handlers.state_manager import Acao, ConversaUsuario, EstadoConversa, gerenciador
 from bot.models.comunidade import Comunidade, Link
-from bot.services import historico_service
+from bot.services import escrita_service, historico_service
 from bot.services.readme_service import parse_readme
 
 README_FIXTURE = """# 💻 Comunidades
@@ -261,3 +264,88 @@ class ConversaoFake:
     nome_original = "Delphi"
     secao_alvo = "Linguagens"
     rascunho = None
+
+
+class FakeUser:
+    def __init__(self, uid=1):
+        self.id = uid
+
+
+class FakeMessage:
+    def __init__(self, texto=""):
+        self.text = texto
+        self.chat_id = 1
+        self.sent = []
+
+    async def reply_text(self, texto, **kwargs):
+        self.sent.append((texto, kwargs))
+
+
+class FakeQuery:
+    def __init__(self, data, uid=1):
+        self.data = data
+        self.from_user = FakeUser(uid)
+        self.message = FakeMessage()
+        self.answerado = False
+
+    async def answer(self):
+        self.answerado = True
+
+
+class FakeUpdate:
+    def __init__(self, data, uid=1):
+        self.effective_user = FakeUser(uid)
+        self.message = FakeMessage()
+        self.callback_query = FakeQuery(data, uid=uid)
+
+
+class FakeContext:
+    def __init__(self):
+        self.user_data = {}
+
+
+class FakeGit:
+    def sincronizar(self):
+        pass
+
+
+@pytest.fixture
+def ambiente_menu(tmp_path, monkeypatch):
+    readme = tmp_path / "repositorio" / "README.md"
+    readme.parent.mkdir(parents=True)
+    readme.write_text(README_FIXTURE, encoding="utf-8")
+    backup_dir = tmp_path / "backup"
+    backup_dir.mkdir()
+    monkeypatch.setattr(Config, "README_PATH", readme)
+    monkeypatch.setattr(Config, "BACKUP_DIR", backup_dir)
+    monkeypatch.setattr(Config, "TELEGRAM_ALLOWED_USER_IDS", [1])
+    gerenciador.conversas.clear()
+    yield readme
+    gerenciador.conversas.clear()
+
+
+class TestAprovacaoSeguranca:
+    @pytest.mark.asyncio
+    async def test_hash_mudou_exige_novo_preview(self, ambiente_menu, monkeypatch):
+        monkeypatch.setattr(menu.GitService, "from_config", staticmethod(lambda: FakeGit()))
+        conversa = gerenciador.iniciar(
+            1, Acao.NOVA, rascunho=Comunidade("GruPy Pará", [Link("Site", "https://grupy.pa")])
+        )
+        conversa.secao_alvo = "Linguagens"
+        conversa.hash_base = "hash-antigo"
+        update = FakeUpdate(CB_OK)
+        estado = await menu.aprovacao(update, FakeContext())
+        assert estado == ConversationHandler.END
+        assert any(
+            escrita_service.MENSAGEM_HASH_MUDOU in t for t, _ in update.callback_query.message.sent
+        )
+
+    @pytest.mark.asyncio
+    async def test_ocupado_avisa(self, ambiente_menu):
+        update = FakeUpdate(CB_OK)
+        async with escrita_service.lock_escrita():
+            estado = await menu.aprovacao(update, FakeContext())
+        assert estado is EstadoConversa.APROVACAO
+        assert any(
+            escrita_service.MENSAGEM_OCUPADO in t for t, _ in update.callback_query.message.sent
+        )

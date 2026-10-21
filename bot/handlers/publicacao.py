@@ -26,7 +26,7 @@ from telegram.ext import (
 
 from bot.config import Config
 from bot.handlers.state_manager import Acao, EstadoConversa, gerenciador
-from bot.services import backup_service, historico_service
+from bot.services import backup_service, escrita_service, historico_service
 from bot.services.git_service import GitError, GitService
 
 logger = logging.getLogger(__name__)
@@ -169,20 +169,24 @@ async def publicar_confirmacao(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.message.reply_text("❌ Publicação cancelada.")
         return ConversationHandler.END
 
-    servico = GitService.from_config()
-    try:
-        servico.sincronizar()
-        commit = servico.commit(Config.README_PATH, MENSAGEM_COMMIT)
-        servico.push()
-    except GitError as erro:
-        gerenciador.encerrar(uid)
-        await query.message.reply_text(f"⚠️ Falha ao publicar: {erro}")
-        return ConversationHandler.END
+    if escrita_service.ocupado():
+        await query.message.reply_text(escrita_service.MENSAGEM_OCUPADO)
+        return EstadoConversa.PUBLICAR_CONFIRMACAO
 
-    historico_service.registrar(
-        _historico_path(),
-        historico_service.RegistroHistorico(acao="publicar", usuario_id=uid, commit=commit),
-    )
+    async with escrita_service.lock_escrita():
+        servico = GitService.from_config()
+        try:
+            servico.sincronizar()
+            commit = servico.commit(Config.README_PATH, MENSAGEM_COMMIT)
+            servico.push()
+        except GitError as erro:
+            gerenciador.encerrar(uid)
+            await query.message.reply_text(f"⚠️ Falha ao publicar: {erro}")
+            return ConversationHandler.END
+        historico_service.registrar(
+            _historico_path(),
+            historico_service.RegistroHistorico(acao="publicar", usuario_id=uid, commit=commit),
+        )
     gerenciador.encerrar(uid)
     await query.message.reply_text(f"✅ Publicado. Commit `{commit[:8]}`.", parse_mode="Markdown")
     return ConversationHandler.END

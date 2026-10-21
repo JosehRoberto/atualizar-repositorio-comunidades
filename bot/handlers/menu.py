@@ -34,7 +34,8 @@ from bot.handlers.state_manager import (
     gerenciador,
 )
 from bot.models.comunidade import Comunidade, Link
-from bot.services import backup_service, historico_service
+from bot.services import backup_service, escrita_service, historico_service
+from bot.services.git_service import GitError, GitService
 from bot.services.readme_service import (
     ComunidadeNaoEncontrada,
     SecaoNaoEditavel,
@@ -258,7 +259,7 @@ async def _responder(update: Update, texto: str, **kwargs) -> None:
 
 async def _enviar_preview(update: Update, conversa) -> EstadoConversa:
     """Envia o preview com o teclado de aprovação e avança o estado."""
-    doc = carregar_readme(Config.README_PATH)
+    conversa.hash_base = escrita_service.hash_atual(Config.README_PATH)
     conversa.estado = EstadoConversa.APROVACAO
     await _responder(
         update,
@@ -440,6 +441,7 @@ async def remover_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Es
         return EstadoConversa.REMOVER_NOME
     conversa.nome_original = ocorrencia.comunidade.nome
     conversa.secao_alvo = ocorrencia.secao.nome
+    conversa.hash_base = escrita_service.hash_atual(Config.README_PATH)
     teclado = InlineKeyboardMarkup(
         [[
             InlineKeyboardButton("✅ Remover", callback_data="rem_ok"),
@@ -458,23 +460,35 @@ async def remover_confirmacao(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Confirma ou cancela a remoção."""
     query = update.callback_query
     await query.answer()
-    conversa = gerenciador.obter(query.from_user.id)
+    uid = query.from_user.id
+    conversa = gerenciador.obter(uid)
     if query.data == "rem_nao":
-        gerenciador.encerrar(query.from_user.id)
+        gerenciador.encerrar(uid)
         await query.message.reply_text("❌ Remoção cancelada.")
         return ConversationHandler.END
-    doc = carregar_readme(Config.README_PATH)
-    resumo = aplicar_no_doc(doc, conversa)
-    persistir(
-        doc,
-        caminho=Config.README_PATH,
-        backup_dir=Config.BACKUP_DIR,
-        historico_path=_historico_path(),
-        usuario_id=query.from_user.id,
-        conversa=conversa,
-        resumo=resumo,
-    )
-    gerenciador.encerrar(query.from_user.id)
+    if escrita_service.ocupado():
+        await query.message.reply_text(escrita_service.MENSAGEM_OCUPADO)
+        return EstadoConversa.REMOVER_CONFIRMACAO
+    async with escrita_service.lock_escrita():
+        erro = escrita_service.sincronizar_seguro(GitService.from_config())
+        if erro is None:
+            erro = escrita_service.conferir_hash(Config.README_PATH, conversa.hash_base)
+        if erro is not None:
+            gerenciador.encerrar(uid)
+            await query.message.reply_text(erro)
+            return ConversationHandler.END
+        doc = carregar_readme(Config.README_PATH)
+        resumo = aplicar_no_doc(doc, conversa)
+        persistir(
+            doc,
+            caminho=Config.README_PATH,
+            backup_dir=Config.BACKUP_DIR,
+            historico_path=_historico_path(),
+            usuario_id=uid,
+            conversa=conversa,
+            resumo=resumo,
+        )
+    gerenciador.encerrar(uid)
     await query.message.reply_text(resumo, parse_mode="Markdown")
     return ConversationHandler.END
 
@@ -551,22 +565,33 @@ async def aprovacao(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Estad
         return EstadoConversa.EDITAR_ESCOLHA
 
     # CB_OK → aplicar
-    doc = carregar_readme(Config.README_PATH)
-    try:
-        resumo = aplicar_no_doc(doc, conversa)
-    except (ComunidadeNaoEncontrada, SecaoNaoEncontrada, SecaoNaoEditavel) as erro:
-        await query.message.reply_text(f"⚠️ Não foi possível aplicar: {erro}")
-        gerenciador.encerrar(uid)
-        return ConversationHandler.END
-    persistir(
-        doc,
-        caminho=Config.README_PATH,
-        backup_dir=Config.BACKUP_DIR,
-        historico_path=_historico_path(),
-        usuario_id=uid,
-        conversa=conversa,
-        resumo=resumo,
-    )
+    if escrita_service.ocupado():
+        await query.message.reply_text(escrita_service.MENSAGEM_OCUPADO)
+        return EstadoConversa.APROVACAO
+    async with escrita_service.lock_escrita():
+        erro = escrita_service.sincronizar_seguro(GitService.from_config())
+        if erro is None:
+            erro = escrita_service.conferir_hash(Config.README_PATH, conversa.hash_base)
+        if erro is not None:
+            gerenciador.encerrar(uid)
+            await query.message.reply_text(erro)
+            return ConversationHandler.END
+        doc = carregar_readme(Config.README_PATH)
+        try:
+            resumo = aplicar_no_doc(doc, conversa)
+        except (ComunidadeNaoEncontrada, SecaoNaoEncontrada, SecaoNaoEditavel) as erro_aplicar:
+            gerenciador.encerrar(uid)
+            await query.message.reply_text(f"⚠️ Não foi possível aplicar: {erro_aplicar}")
+            return ConversationHandler.END
+        persistir(
+            doc,
+            caminho=Config.README_PATH,
+            backup_dir=Config.BACKUP_DIR,
+            historico_path=_historico_path(),
+            usuario_id=uid,
+            conversa=conversa,
+            resumo=resumo,
+        )
     gerenciador.encerrar(uid)
     await query.message.reply_text(resumo, parse_mode="Markdown")
     return ConversationHandler.END
