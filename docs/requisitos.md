@@ -268,16 +268,27 @@ atualizar-repositorio-comunidades/
 | `GIT_USER_NAME`              | Nome do commit (ex.: `ParaLivre`)                     |
 | `GIT_USER_EMAIL`             | E-mail do commit (ex.: `contato@paralivre.org`)       |
 | `README_PATH`                | Caminho do README no clone (ex.: `repositorio/README.md`) |
+| `BACKUP_DIR`                 | Pasta de backups (ex.: `backup`)                      |
 | `TIMEZONE`                   | `America/Belem`                                       |
 
 ---
 
 ## 6. Próximos passos
 
-1. Resolver as pendências da seção 3.
-2. Inicializar o repositório do projeto (git) e criar `.gitignore`.
-3. Executar o clone de `repositorio/`.
-4. Criar o esqueleto do bot em `bot/` conforme a seção 4.
-5. Implementar parser/editor de Markdown, serviços de backup e histórico.
-6. Implementar handlers e fluxos do Telegram.
-7. Escrever testes (pytest) e documentação (`README.md` do projeto e `CHANGELOG.md`).
+### Concluído
+
+1. Estrutura inicial do projeto (git, `.gitignore`) — commit `8af47a3`.
+2. Clone do repositório alvo em `repositorio/`.
+3. `AGENTS.md`, `CHANGELOG.md` e `README.md` do projeto.
+4. Esqueleto do bot em `bot/` (config, handlers, models, schemas, services, tests) — commit `ec67e9e`.
+
+### Em andamento
+
+5. Implementar o parser/editor do README (`bot/services/readme_service.py`), o serviço de backup e o
+   de histórico — cada um com teste hermético.
+6. Implementar `bot/handlers/state_manager.py` e os fluxos do Telegram (menu, preview, aprovação).
+7. Implementar a publicação (`/publicar`) e o rollback (`/restaurar`).
+8. Escrever testes de fluxo e manter a documentação atualizada.
+9. Configurar `bot/.env` e a unit systemd para deploy.
+
+> Handoff detalhado para a próxima sessão: `docs/nova-sessao.md`.

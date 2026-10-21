@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### Documentação (21/10/2026) — `docs/requisitos.md` sincronizado
+
+- **Alterado:** `§6 Próximos passos` atualizado (concluído vs. em andamento, com os commits).
+- **Alterado:** `§5` passou a listar `BACKUP_DIR`, alinhado a `bot/config.py` e `bot/.env.example`.
+- **Arquivos:** `docs/requisitos.md`.
+
 ### Documentação (21/10/2026) — Prompt de continuidade para nova sessão
 
 - **Adicionado:** `docs/nova-sessao.md` — prompt de handoff para uma nova sessão do OpenCode com
