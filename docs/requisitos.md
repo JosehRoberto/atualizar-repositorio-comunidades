@@ -289,6 +289,11 @@ atualizar-repositorio-comunidades/
 
 5. Implementar o parser/editor do README (`bot/services/readme_service.py`), o serviço de backup e o
    de histórico — cada um com teste hermético.
+   - **Parser/editor do README: concluído** (`bot/services/readme_service.py` + 26 testes
+     herméticos).
+   - **Serviço de backup: concluído** (`bot/services/backup_service.py` + 20 testes herméticos).
+   - **Serviço de histórico: concluído** (`bot/services/historico_service.py` + `tempo.py` + 15
+     testes herméticos).
 6. Implementar `bot/handlers/state_manager.py` e os fluxos do Telegram (menu, preview, aprovação).
 7. Implementar a publicação (`/publicar`) e o rollback (`/restaurar`).
 8. Escrever testes de fluxo e manter a documentação atualizada.

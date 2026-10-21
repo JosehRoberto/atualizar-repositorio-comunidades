@@ -5,6 +5,50 @@
 
 ## [Unreleased]
 
+### Adicionado (21/10/2026) — Serviço de histórico e utilitário de tempo
+
+- **Adicionado:** `bot/services/historico_service.py` — registro **JSONL append-only**
+  (`bot/history/historico.jsonl`) com os campos `timestamp`, `usuario_id`, `acao`, `secao`,
+  `comunidade`, `antes`, `depois`, `backup_path`, `commit`; `ler_historico`, `ultimos`, `contar`
+  e `RegistroHistorico` (dataclass). Linhas corrompidas levantam `HistoricoCorrompido`.
+- **Adicionado:** `bot/services/tempo.py` — `fuso_belem()`, `timestamp_belem()` e `agora_iso()`
+  (fuso `America/Belem`), extraídos de `backup_service` para reuso (sem duplicação).
+- **Alterado:** `bot/services/backup_service.py` passa a importar `timestamp_belem` de `tempo.py`
+  (comportamento preservado).
+- **Testes:** +15 herméticos (`bot/tests/test_historico_service.py`) — append, campos/ordem,
+  timestamp automático/explicito, round-trip, linhas vazias/corrompidas e `ultimos`/`contar`.
+  Suíte em **73**.
+- **Validado:** `py_compile` OK; `pytest bot/tests/` → **73 passed**.
+- **Arquivos:** `bot/services/historico_service.py`, `bot/services/tempo.py`,
+  `bot/services/backup_service.py`, `bot/tests/test_historico_service.py`.
+
+### Adicionado (21/10/2026) — Serviço de backup (`backup_service`)
+
+- **Adicionado:** `bot/services/backup_service.py` (região protegida) — `criar_backup`
+  (`<nome>_YYYYMMDD_HHMMSS.bak`, fuso `America/Belem`), `listar_backups`/`ultimo_backup`
+  (mais recente primeiro, por timestamp do nome), `limpar_antigos` (mantém as últimas N sessões),
+  `diff_backup` (preview de restauração) e `restaurar_backup` (gera backup
+  `_pre-restauracao_<ts>.bak` antes de restaurar). Sem `.env` nem rede — recebe caminhos explícitos.
+- **Testes:** +20 herméticos (`bot/tests/test_backup_service.py`) — timestamp, criação/nome/conteúdo,
+  listagem/ordenação, limpeza, diff e restauração. Suíte em **58**.
+- **Validado:** `py_compile` OK; `pytest bot/tests/` → **58 passed**.
+- **Arquivos:** `bot/services/backup_service.py`, `bot/tests/test_backup_service.py`.
+
+### Adicionado (21/10/2026) — Parser/editor do README (`readme_service`)
+
+- **Adicionado:** `bot/services/readme_service.py` (região protegida) — parse do README em
+  seções/âncoras/tabelas, detecção de schema (`| Comunidade | Links |` × `| Serviço | Link |`),
+  leitura e escrita de linhas `| **Nome** | badges |`, inserção/edição/remoção em **ordem
+  alfabética** (`nome_normalizado`), badges na **ordem canônica** com renderização shields.io e
+  normalização do marcador `:triangular_flag_on_post:` (no máximo 1; referência **Divas Digitais**).
+  Edição **cirúrgica**: só as linhas alvo são reescritas.
+- **Testes:** +26 herméticos (`bot/tests/test_readme_service.py`) — parse, round-trip, ordenação de
+  badges, inserir/editar/remover, migração do marcador, seção não editável (Observatório) e I/O com
+  `tmp_path`. Suíte em **38**.
+- **Validado:** `py_compile` OK; round-trip idêntico no `repositorio/README.md` (17 seções, 70
+  comunidades, 16 itens de navegação); `pytest bot/tests/` → **38 passed**.
+- **Arquivos:** `bot/services/readme_service.py`, `bot/tests/test_readme_service.py`.
+
 ### Documentação (21/10/2026) — Nomes do bot e da unit systemd padronizados
 
 - **Alterado:** `docs/requisitos.md §2.15` — username `@atualizar_repositorio_bot` e unit
