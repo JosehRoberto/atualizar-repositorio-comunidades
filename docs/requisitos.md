@@ -303,6 +303,9 @@ atualizar-repositorio-comunidades/
 7. Implementar a publicação (`/publicar`) e o rollback (`/restaurar`).
    - **Serviço Git/GitLab: concluído** (`bot/services/git_service.py` + 24 testes herméticos) —
      base para commit/push/MR da publicação.
+   - **Publicação e restauração: concluído** (`bot/handlers/publicacao.py` + 25 testes herméticos) —
+     `/publicar` (commit + push com confirmação) e `/restaurar` (diff + backup prévio).
+   - **Comandos de consulta: concluído** — `/validar` e `/historico` no menu.
 8. Escrever testes de fluxo e manter a documentação atualizada.
 9. Configurar a unit systemd para deploy (`bot/.env` já configurado).
 

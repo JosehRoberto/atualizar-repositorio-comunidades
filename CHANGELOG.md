@@ -5,6 +5,26 @@
 
 ## [Unreleased]
 
+### Adicionado (21/10/2026) — Publicação e restauração (`publicacao`)
+
+- **Adicionado:** `bot/handlers/publicacao.py` (região protegida) — `/publicar` (sincroniza, mostra
+  as alterações pendentes e, **somente após confirmação explícita**, faz `commit` + `push`; token
+  fora da URL e sem `reset --hard`) e `/restaurar` (lista os backups, mostra o **diff**, exige
+  confirmação e restaura com backup prévio `README_pre-restauracao_*.bak`). Ambos registram no
+  histórico JSONL.
+- **Adicionado:** `GitService.alteracoes()` — lista as alterações pendentes (`git status --porcelain`).
+- **Alterado:** `bot/handlers/state_manager.py` (região protegida) — ações `PUBLICAR`/`RESTAURAR` e
+  estados `PUBLICAR_CONFIRMACAO`, `RESTAURAR_ESCOLHA`, `RESTAURAR_CONFIRMACAO`.
+- **Alterado:** `bot/handlers/menu.py` — mescla os fluxos de publicação/restauração no
+  `ConversationHandler` e adiciona `/validar` e `/historico`; `bot/handlers/commands.py` registra os
+  comandos e atualiza o menu de `/start`.
+- **Testes:** +25 herméticos (`bot/tests/test_publicacao.py` = 23 + 2 em `test_git_service.py`).
+  Suíte em **220**.
+- **Validado:** `py_compile` OK; `pytest bot/tests/` → **220 passed**.
+- **Arquivos:** `bot/handlers/publicacao.py`, `bot/handlers/state_manager.py`, `bot/handlers/menu.py`,
+  `bot/handlers/commands.py`, `bot/services/git_service.py`, `bot/tests/test_publicacao.py`,
+  `bot/tests/test_git_service.py`, `bot/tests/test_state_manager.py`.
+
 ### Adicionado (21/10/2026) — Handlers do menu e fluxo conversacional (`menu`)
 
 - **Adicionado:** `bot/handlers/menu.py` — consome a máquina de estados e conduz o fluxo

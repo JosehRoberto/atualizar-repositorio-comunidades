@@ -46,12 +46,14 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
   - `handlers/state_manager.py` — máquina de estados (`EstadoConversa`, `Acao`, `ConversaUsuario`,
     `GerenciadorEstado`); ordem de transição por ação (região protegida).
   - `handlers/menu.py` — fluxo conversacional (nova/editar/remover/buscar) com **preview** e
-    aprovação (`✅/✏️/🔀/❌`); backup + escrita cirúrgica + histórico.
+    aprovação (`✅/✏️/🔀/❌`); backup + escrita cirúrgica + histórico; `/validar` e `/historico`.
+  - `handlers/publicacao.py` — `/publicar` (commit + push com confirmação) e `/restaurar`
+    (lista backups → diff → confirmação → backup prévio + histórico).
   - `models/comunidade.py` — `Comunidade`, `Link`, `nome_normalizado()` (minúsculas, sem acentos).
   - `schemas/comunidade.py` — `ComunidadeSchema`, `LinkSchema` (pydantic v2, valida URL).
   - `services/` — implementados (região protegida): `readme_service`, `backup_service`,
     `historico_service`, `tempo`, `git_service` e `validacao_service`.
-  - `tests/` — **191** testes herméticos (config, modelo, schemas, serviços e fluxo) **passando**.
+  - `tests/` — **220** testes herméticos (config, modelo, schemas, serviços e fluxo) **passando**.
 - Raiz: `pytest.ini`, `requirements-test.txt`, `README.md`, `bot/requirements.txt`,
   `bot/.env.example`.
 - `bot/.env` **configurado** (não versionado): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`
@@ -59,8 +61,8 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
 - Bot **operacional**: `create_application()` monta a aplicação e o smoke test iniciou o polling sem
   erros (bot `@atualizar_repositorio_bot`).
 - Segurança: rotação do token GitLab **concluída** (token antigo revogado; exposição local removida).
-- **Pendente:** publicação (`/publicar`), restauração (`/restaurar`), multi-usuário
-  (`asyncio.Lock`), comandos `/validar` e `/historico` no menu e deploy via systemd.
+- **Pendente:** multi-usuário/segurança (`asyncio.Lock`, `git pull --ff-only` antes de editar,
+  recheck de hash antes de gravar) e deploy via systemd.
 
 ### Próximos passos (ordem recomendada)
 
@@ -83,10 +85,11 @@ Implementar cada item **com teste hermético** antes de avançar:
 6. ✅ **Fluxo conversacional** — `bot/handlers/state_manager.py` (ordem dos estados) + handlers do menu
    (nova/buscar/editar/remover/listar) com **preview** e **aprovação** (`✅/✏️/🔀/❌`).
    **Concluído** (22 testes em `test_state_manager.py` + 22 em `test_menu.py`).
-7. **Publicação** — `/publicar` como etapa separada, **somente com confirmação explícita**;
-   `rollback`/`/restaurar` (lista backups, diff, confirmação). *← próximo*
+7. ✅ **Publicação** — `/publicar` como etapa separada, **somente com confirmação explícita**;
+   `rollback`/`/restaurar` (lista backups, diff, confirmação). **Concluído**
+   (`bot/handlers/publicacao.py` + 25 testes). Inclui `/validar` e `/historico`.
 8. **Multi-usuário/segurança** — `asyncio.Lock` por arquivo; `git pull --ff-only` antes de editar;
-   recheck de hash antes de gravar.
+   recheck de hash antes de gravar. *← próximo*
 9. **Deploy local (systemd)** — criar `.venv` e a unit `bot/atualizar-repositorio-bot.service`
    (instância única). O `bot/.env` já está configurado.
 
@@ -111,6 +114,6 @@ git status --short
 
 ### Ponto de entrada
 
-Comece pelo item 7 (publicação `/publicar` e rollback `/restaurar`) — os itens 1–6 já estão
-implementados. Antes de codar, leia `docs/requisitos.md` §2.11 (rollback) e §2.12 (multi-usuário) e o
-`bot/services/git_service.py` (commit/branch/push/MR já disponíveis).
+Comece pelo item 8 (multi-usuário/segurança) — os itens 1–7 já estão implementados. Antes de codar,
+leia `docs/requisitos.md` §2.12 (concorrência/sincronização) e revise `bot/handlers/menu.py` e
+`bot/handlers/publicacao.py` (pontos de escrita no README).
