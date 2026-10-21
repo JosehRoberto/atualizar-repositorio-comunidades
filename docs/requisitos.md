@@ -307,6 +307,9 @@ atualizar-repositorio-comunidades/
      `/publicar` (commit + push com confirmação) e `/restaurar` (diff + backup prévio).
    - **Comandos de consulta: concluído** — `/validar` e `/historico` no menu.
 8. Escrever testes de fluxo e manter a documentação atualizada.
+   - **Multi-usuário/segurança: concluído** (`bot/services/escrita_service.py` + 12 testes) —
+     `asyncio.Lock` global, `git fetch` + `pull --ff-only` antes de gravar e recheck de hash do
+     README (§2.12).
 9. Configurar a unit systemd para deploy (`bot/.env` já configurado).
 
 > Handoff detalhado para a próxima sessão: `docs/nova-sessao.md`.

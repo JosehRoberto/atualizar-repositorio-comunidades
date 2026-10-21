@@ -5,6 +5,24 @@
 
 ## [Unreleased]
 
+### Adicionado (21/10/2026) — Concorrência e proteção de escrita (`escrita_service`)
+
+- **Adicionado:** `bot/services/escrita_service.py` (região protegida) — `asyncio.Lock` global de
+  escrita (`lock_escrita`/`ocupado`), `sincronizar_seguro` (`fetch` + `pull --ff-only`; aborta em
+  conflito) e `conferir_hash` (recheck do hash do README antes de gravar) — §2.12.
+- **Alterado:** `bot/handlers/state_manager.py` (região protegida) — campo `hash_base` em
+  `ConversaUsuario`.
+- **Alterado:** `bot/handlers/menu.py` — o preview grava o hash; `aprovacao` e
+  `remover_confirmacao` adquirem o lock, sincronizam e reconferem o hash antes de gravar, com aviso
+  "aguarde" ao segundo usuário.
+- **Alterado:** `bot/handlers/publicacao.py` — `/publicar` passa a operar sob o mesmo lock.
+- **Testes:** +12 herméticos (`bot/tests/test_escrita_service.py` = 10 + 2 em `test_menu.py`).
+  Suíte em **232**.
+- **Validado:** `py_compile` OK; `pytest bot/tests/` → **232 passed**.
+- **Arquivos:** `bot/services/escrita_service.py`, `bot/handlers/state_manager.py`,
+  `bot/handlers/menu.py`, `bot/handlers/publicacao.py`, `bot/tests/test_escrita_service.py`,
+  `bot/tests/test_menu.py`, `bot/tests/test_state_manager.py`.
+
 ### Adicionado (21/10/2026) — Publicação e restauração (`publicacao`)
 
 - **Adicionado:** `bot/handlers/publicacao.py` (região protegida) — `/publicar` (sincroniza, mostra

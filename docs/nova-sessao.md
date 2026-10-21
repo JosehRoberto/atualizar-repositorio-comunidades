@@ -52,8 +52,8 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
   - `models/comunidade.py` — `Comunidade`, `Link`, `nome_normalizado()` (minúsculas, sem acentos).
   - `schemas/comunidade.py` — `ComunidadeSchema`, `LinkSchema` (pydantic v2, valida URL).
   - `services/` — implementados (região protegida): `readme_service`, `backup_service`,
-    `historico_service`, `tempo`, `git_service` e `validacao_service`.
-  - `tests/` — **220** testes herméticos (config, modelo, schemas, serviços e fluxo) **passando**.
+    `historico_service`, `tempo`, `git_service`, `validacao_service` e `escrita_service`.
+  - `tests/` — **232** testes herméticos (config, modelo, schemas, serviços e fluxo) **passando**.
 - Raiz: `pytest.ini`, `requirements-test.txt`, `README.md`, `bot/requirements.txt`,
   `bot/.env.example`.
 - `bot/.env` **configurado** (não versionado): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`
@@ -61,8 +61,7 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
 - Bot **operacional**: `create_application()` monta a aplicação e o smoke test iniciou o polling sem
   erros (bot `@atualizar_repositorio_bot`).
 - Segurança: rotação do token GitLab **concluída** (token antigo revogado; exposição local removida).
-- **Pendente:** multi-usuário/segurança (`asyncio.Lock`, `git pull --ff-only` antes de editar,
-  recheck de hash antes de gravar) e deploy via systemd.
+- **Pendente:** deploy via systemd (criar `.venv` e a unit) — os itens 1–8 estão implementados.
 
 ### Próximos passos (ordem recomendada)
 
@@ -88,10 +87,10 @@ Implementar cada item **com teste hermético** antes de avançar:
 7. ✅ **Publicação** — `/publicar` como etapa separada, **somente com confirmação explícita**;
    `rollback`/`/restaurar` (lista backups, diff, confirmação). **Concluído**
    (`bot/handlers/publicacao.py` + 25 testes). Inclui `/validar` e `/historico`.
-8. **Multi-usuário/segurança** — `asyncio.Lock` por arquivo; `git pull --ff-only` antes de editar;
-   recheck de hash antes de gravar. *← próximo*
+8. ✅ **Multi-usuário/segurança** — `asyncio.Lock` por arquivo; `git pull --ff-only` antes de editar;
+   recheck de hash antes de gravar. **Concluído** (`bot/services/escrita_service.py` + 12 testes).
 9. **Deploy local (systemd)** — criar `.venv` e a unit `bot/atualizar-repositorio-bot.service`
-   (instância única). O `bot/.env` já está configurado.
+   (instância única). O `bot/.env` já está configurado. *← próximo*
 
 ### Convenções obrigatórias (resumo)
 
@@ -114,6 +113,6 @@ git status --short
 
 ### Ponto de entrada
 
-Comece pelo item 8 (multi-usuário/segurança) — os itens 1–7 já estão implementados. Antes de codar,
-leia `docs/requisitos.md` §2.12 (concorrência/sincronização) e revise `bot/handlers/menu.py` e
-`bot/handlers/publicacao.py` (pontos de escrita no README).
+Comece pelo item 9 (deploy systemd) — os itens 1–8 já estão implementados. O `bot/.env` já está
+configurado; crie a `.venv`, instale `bot/requirements.txt` e a unit
+`bot/atualizar-repositorio-bot.service` (instância única).
