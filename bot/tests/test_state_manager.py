@@ -37,6 +37,8 @@ class TestConversaUsuario:
         conv.nome_original = "X"
         conv.secao_alvo = "Linguagens"
         conv.campo_editar = CAMPO_NOME
+        conv.link_indice = 2
+        conv.link_tipo = "Instagram"
         conv.backup_escolhido = "backup/README_x.bak"
         conv.hash_base = "abc"
         conv.reset()
@@ -46,6 +48,8 @@ class TestConversaUsuario:
         assert conv.nome_original is None
         assert conv.secao_alvo is None
         assert conv.campo_editar is None
+        assert conv.link_indice is None
+        assert conv.link_tipo is None
         assert conv.backup_escolhido is None
         assert conv.hash_base is None
         assert conv.iniciada_em is None
@@ -196,3 +200,26 @@ class TestProximoEstado:
         conv = gerenciador.iniciar(1, Acao.NOVA)
         conv.estado = EstadoConversa.APROVACAO
         assert gerenciador.proximo_estado(conv) is None
+
+
+class TestLinksEstados:
+    def test_novos_estados_na_ordem(self):
+        ordem = ORDEM_POR_ACAO[Acao.EDITAR]
+        assert EstadoConversa.LINK_VALOR in ordem
+        assert EstadoConversa.LINK_REMOCAO_CONFIRMACAO in ordem
+        assert ordem[-1] is EstadoConversa.APROVACAO
+
+    def test_editar_links_vai_para_preview(self, gerenciador):
+        conv = gerenciador.iniciar(1, Acao.EDITAR)
+        conv.estado = EstadoConversa.EDITAR_LINKS
+        assert gerenciador.proximo_estado(conv) is EstadoConversa.PREVIEW
+
+    def test_link_valor_volta_para_editar_links(self, gerenciador):
+        conv = gerenciador.iniciar(1, Acao.EDITAR)
+        conv.estado = EstadoConversa.LINK_VALOR
+        assert gerenciador.proximo_estado(conv) is EstadoConversa.EDITAR_LINKS
+
+    def test_remocao_confirmacao_volta_para_editar_links(self, gerenciador):
+        conv = gerenciador.iniciar(1, Acao.EDITAR)
+        conv.estado = EstadoConversa.LINK_REMOCAO_CONFIRMACAO
+        assert gerenciador.proximo_estado(conv) is EstadoConversa.EDITAR_LINKS

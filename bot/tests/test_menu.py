@@ -37,7 +37,7 @@ from bot.handlers.menu import (
     texto_preview,
     texto_resumo_comunidade,
 )
-from bot.handlers.state_manager import Acao, ConversaUsuario, EstadoConversa, gerenciador
+from bot.handlers.state_manager import CAMPO_AMBOS, Acao, ConversaUsuario, EstadoConversa, gerenciador
 from bot.models.comunidade import Comunidade, Link
 from bot.services import escrita_service, historico_service
 from bot.services.readme_service import parse_readme
@@ -716,3 +716,131 @@ class TestListaHandlers:
         assert estado is EstadoConversa.EDITAR_NOME
         _, kwargs = update.message.sent[-1]
         assert _callbacks(kwargs["reply_markup"]) == [CB_LISTAR]
+
+
+# ---------------------------------------------------------------------------
+# Gerenciador de links por botões
+# ---------------------------------------------------------------------------
+
+
+class TestLinkManager:
+    def _conversa(self, links):
+        gerenciador.conversas.clear()
+        conv = gerenciador.iniciar(1, Acao.EDITAR)
+        conv.rascunho = Comunidade("Delphi", list(links))
+        conv.estado = EstadoConversa.EDITAR_LINKS
+        return conv
+
+    @pytest.mark.asyncio
+    async def test_abrir_submenu(self, ambiente_menu):
+        self._conversa([Link("Site", "https://a.com"), Link("Meetup", "https://meetup.com/g")])
+        update = FakeUpdate("edit_lk_1")
+        estado = await menu.editar_link_abrir(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_LINKS
+        _, kwargs = update.callback_query.message.sent[-1]
+        cbs = _callbacks(kwargs["reply_markup"])
+        assert "edit_lk_set_1" in cbs and "edit_lk_rm_1" in cbs
+
+    @pytest.mark.asyncio
+    async def test_alterar_valor_aplica_template(self, ambiente_menu):
+        conv = self._conversa([Link("Instagram", "https://instagram.com/old")])
+        await menu.editar_link_alterar(FakeUpdate("edit_lk_set_0"), FakeContext())
+        assert conv.link_tipo == "Instagram"
+        estado = await menu.editar_link_valor(_update_texto("novo", uid=1), FakeContext())
+        assert estado is EstadoConversa.EDITAR_LINKS
+        assert conv.rascunho.links[0].url == "https://instagram.com/novo"
+        assert conv.link_indice is None and conv.link_tipo is None
+
+    @pytest.mark.asyncio
+    async def test_alterar_valor_url_completa(self, ambiente_menu):
+        conv = self._conversa([Link("Site", "https://a.com")])
+        await menu.editar_link_alterar(FakeUpdate("edit_lk_set_0"), FakeContext())
+        await menu.editar_link_valor(_update_texto("https://novo.com", uid=1), FakeContext())
+        assert conv.rascunho.links[0].url == "https://novo.com"
+
+    @pytest.mark.asyncio
+    async def test_alterar_valor_invalido_permanece(self, ambiente_menu):
+        conv = self._conversa([Link("Site", "https://a.com")])
+        await menu.editar_link_alterar(FakeUpdate("edit_lk_set_0"), FakeContext())
+        estado = await menu.editar_link_valor(_update_texto("sem-url", uid=1), FakeContext())
+        assert estado is EstadoConversa.LINK_VALOR
+        assert conv.rascunho.links[0].url == "https://a.com"
+
+    @pytest.mark.asyncio
+    async def test_adicionar_tipo_e_valor(self, ambiente_menu):
+        conv = self._conversa([Link("Site", "https://a.com")])
+        await menu.editar_link_adicionar(FakeUpdate("edit_lk_add"), FakeContext())
+        indice = menu.TIPOS_LINK.index("Telegram")
+        estado = await menu.editar_link_tipo(FakeUpdate(f"edit_lk_tp_{indice}"), FakeContext())
+        assert estado is EstadoConversa.LINK_VALOR
+        assert conv.link_tipo == "Telegram" and conv.link_indice is None
+        await menu.editar_link_valor(_update_texto("canal", uid=1), FakeContext())
+        assert Link("Telegram", "https://t.me/canal") in conv.rascunho.links
+
+    @pytest.mark.asyncio
+    async def test_remover_link(self, ambiente_menu):
+        conv = self._conversa([Link("Site", "https://a.com"), Link("Meetup", "https://meetup.com/g")])
+        estado = await menu.editar_link_remover(FakeUpdate("edit_lk_rm_1"), FakeContext())
+        assert estado is EstadoConversa.LINK_REMOCAO_CONFIRMACAO
+        estado = await menu.editar_link_remocao_confirmar(FakeUpdate("edit_lk_rmok"), FakeContext())
+        assert estado is EstadoConversa.EDITAR_LINKS
+        assert [link.tipo for link in conv.rascunho.links] == ["Site"]
+
+    @pytest.mark.asyncio
+    async def test_remover_ultimo_bloqueado(self, ambiente_menu):
+        conv = self._conversa([Link("Site", "https://a.com")])
+        update = FakeUpdate("edit_lk_rm_0")
+        estado = await menu.editar_link_remover(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_LINKS
+        assert len(conv.rascunho.links) == 1
+        assert any("ao menos 1 link" in t for t, _ in update.callback_query.message.sent)
+
+    @pytest.mark.asyncio
+    async def test_remocao_cancelar(self, ambiente_menu):
+        conv = self._conversa([Link("Site", "https://a.com"), Link("Meetup", "https://m")])
+        await menu.editar_link_remover(FakeUpdate("edit_lk_rm_1"), FakeContext())
+        estado = await menu.editar_link_remocao_confirmar(FakeUpdate("edit_lk_rmno"), FakeContext())
+        assert estado is EstadoConversa.EDITAR_LINKS
+        assert len(conv.rascunho.links) == 2
+
+    @pytest.mark.asyncio
+    async def test_concluir_sem_links_bloqueia(self, ambiente_menu):
+        self._conversa([])
+        update = FakeUpdate("edit_lk_ok")
+        estado = await menu.editar_link_concluir(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_LINKS
+        assert any("ao menos 1 link" in t for t, _ in update.callback_query.message.sent)
+
+    @pytest.mark.asyncio
+    async def test_colar_varios_anexa_com_dedupe(self, ambiente_menu):
+        conv = self._conversa([Link("Site", "https://a.com")])
+        update = _update_texto("Telegram https://t.me/x\nTelegram https://t.me/x", uid=1)
+        estado = await menu.editar_links(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_LINKS
+        assert [link.tipo for link in conv.rascunho.links] == ["Site", "Telegram"]
+
+    @pytest.mark.asyncio
+    async def test_nao_autorizado(self, ambiente_menu):
+        self._conversa([Link("Site", "https://a.com")])
+        update = FakeUpdate("edit_lk_0", uid=2)
+        estado = await menu.editar_link_abrir(update, FakeContext())
+        assert estado == ConversationHandler.END
+        assert any("autorizado" in t for t, _ in update.callback_query.message.sent)
+
+    @pytest.mark.asyncio
+    async def test_editar_escolha_links_abre_menu(self, ambiente_menu):
+        conv = gerenciador.iniciar(1, Acao.EDITAR, rascunho=Comunidade("Delphi", [Link("Site", "https://a")]))
+        conv.estado = EstadoConversa.EDITAR_ESCOLHA
+        update = FakeUpdate("edit_links")
+        estado = await menu.editar_escolha(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_LINKS
+        _, kwargs = update.callback_query.message.sent[-1]
+        assert "reply_markup" in kwargs
+
+    @pytest.mark.asyncio
+    async def test_editar_novo_nome_ambos_abre_menu(self, ambiente_menu):
+        conv = gerenciador.iniciar(1, Acao.EDITAR, rascunho=Comunidade("Delphi", [Link("Site", "https://a")]))
+        conv.estado = EstadoConversa.EDITAR_NOVO_NOME
+        conv.campo_editar = CAMPO_AMBOS
+        estado = await menu.editar_novo_nome(_update_texto("Delphi Novo", uid=1), FakeContext())
+        assert estado is EstadoConversa.EDITAR_LINKS

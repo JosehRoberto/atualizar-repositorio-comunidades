@@ -35,9 +35,10 @@ from bot.handlers.state_manager import (
     gerenciador,
 )
 from bot.models.comunidade import Comunidade, Link
-from bot.services import backup_service, busca_service, escrita_service, historico_service
+from bot.services import backup_service, busca_service, escrita_service, historico_service, link_template
 from bot.services.git_service import GitError, GitService
 from bot.services.readme_service import (
+    ORDEM_BADGES,
     ComunidadeNaoEncontrada,
     SecaoNaoEditavel,
     SecaoNaoEncontrada,
@@ -67,6 +68,17 @@ PADRAO_LISTA_CANDIDATO = r"^edit_lst_(\d+)$"
 CB_LISTAR = "edit_listar"
 CB_LISTA_VOLTAR = "edit_lista_voltar"
 LIMITE_LISTA = 8
+# ALTERADO [21/10/2026]: gerenciador de links por botões no /editar.
+PADRAO_LINK_ABRIR = r"^edit_lk_(\d+)$"
+PADRAO_LINK_ALTERAR = r"^edit_lk_set_(\d+)$"
+PADRAO_LINK_REMOVER = r"^edit_lk_rm_(\d+)$"
+PADRAO_LINK_ADICIONAR = "^edit_lk_add$"
+PADRAO_LINK_TIPO = r"^edit_lk_tp_(\d+)$"
+PADRAO_LINK_CONCLUIR = "^edit_lk_ok$"
+PADRAO_LINK_VOLTAR = "^edit_lk_back$"
+PADRAO_LINK_REMOCAO = "^edit_lk_rm(ok|no)$"
+CB_LINK_VOLTAR = "edit_lk_back"
+TIPOS_LINK = (*ORDEM_BADGES, "Outros")
 
 PRONTO = "pronto"
 
@@ -258,6 +270,56 @@ def texto_lista(secao: str, pagina: int, total_paginas: int) -> str:
         "Selecione a comunidade que deseja editar:",
     ]
     return "\n".join(linhas)
+
+
+# ALTERADO [21/10/2026]: textos/teclados do gerenciador de links.
+def texto_menu_links(conversa) -> str:
+    """Cabeçalho do gerenciador de links com a lista atual."""
+    nome = conversa.rascunho.nome if conversa.rascunho else ""
+    linhas = [f"🔗 *Links* de *{_md(nome)}*:"]
+    for i, link in enumerate(conversa.rascunho.links, start=1):
+        linhas.append(f"{i}. {_md(link.tipo)} — {_md(link.url)}")
+    if not conversa.rascunho.links:
+        linhas.append("_(nenhum link — adicione ao menos 1)_")
+    return "\n".join(linhas)
+
+
+def teclado_links(links: list[Link]) -> InlineKeyboardMarkup:
+    """Teclado do menu de links: um botão por link + adicionar/concluir."""
+    linhas = [
+        [InlineKeyboardButton(f"{i}. {link.tipo}", callback_data=f"edit_lk_{i - 1}")]
+        for i, link in enumerate(links, start=1)
+    ]
+    linhas.append(
+        [
+            InlineKeyboardButton("➕ Adicionar link", callback_data="edit_lk_add"),
+            InlineKeyboardButton("✅ Concluir", callback_data="edit_lk_ok"),
+        ]
+    )
+    return InlineKeyboardMarkup(linhas)
+
+
+def teclado_link_item(indice: int) -> InlineKeyboardMarkup:
+    """Submenu de um link: alterar valor / remover / voltar."""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("✏️ Alterar valor", callback_data=f"edit_lk_set_{indice}"),
+                InlineKeyboardButton("🗑️ Remover", callback_data=f"edit_lk_rm_{indice}"),
+            ],
+            [InlineKeyboardButton("↩️ Voltar", callback_data=CB_LINK_VOLTAR)],
+        ]
+    )
+
+
+def teclado_tipos() -> InlineKeyboardMarkup:
+    """Catálogo de tipos para adicionar um link."""
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton(tipo, callback_data=f"edit_lk_tp_{i}")]
+            for i, tipo in enumerate(TIPOS_LINK)
+        ]
+    )
 
 
 def texto_preview(conversa, secao: str) -> str:
@@ -651,6 +713,25 @@ async def editar_lista_voltar(update: Update, context: ContextTypes.DEFAULT_TYPE
     return EstadoConversa.EDITAR_LISTA
 
 
+async def _enviar_menu_links(update: Update, conversa) -> EstadoConversa:
+    """Reenvia o menu de links (com o estado atual da lista)."""
+    await _responder(
+        update,
+        texto_menu_links(conversa),
+        parse_mode="Markdown",
+        reply_markup=teclado_links(conversa.rascunho.links),
+    )
+    return EstadoConversa.EDITAR_LINKS
+
+
+def _indice_callback(data: str) -> int:
+    """Extrai o índice numérico do callback (último sufixo ``_<n>``)."""
+    try:
+        return int(data.rsplit("_", 1)[1])
+    except (IndexError, ValueError):
+        return -1
+
+
 async def editar_escolha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
     """Recebe a escolha (nome/links/ambos) e direciona o próximo passo."""
     query = update.callback_query
@@ -660,8 +741,9 @@ async def editar_escolha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     conversa.campo_editar = mapa.get(query.data, CAMPO_NOME)
     proximo = gerenciador.proximo_estado(conversa)
     conversa.estado = proximo
-    pergunta = PERGUNTA_EDITAR_NOVO_NOME if proximo is EstadoConversa.EDITAR_NOVO_NOME else PERGUNTA_EDITAR_LINKS
-    await query.message.reply_text(pergunta, parse_mode="Markdown")
+    if proximo is EstadoConversa.EDITAR_LINKS:
+        return await _enviar_menu_links(update, conversa)
+    await query.message.reply_text(PERGUNTA_EDITAR_NOVO_NOME, parse_mode="Markdown")
     return proximo
 
 
@@ -671,13 +753,13 @@ async def editar_novo_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     conversa.rascunho.nome = update.message.text.strip()
     proximo = gerenciador.proximo_estado(conversa)
     if proximo is EstadoConversa.EDITAR_LINKS:
-        await update.message.reply_text(PERGUNTA_EDITAR_LINKS, parse_mode="Markdown")
-        return proximo
+        conversa.estado = proximo
+        return await _enviar_menu_links(update, conversa)
     return await _enviar_preview(update, conversa)
 
 
 async def editar_links(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
-    """Acumula novos links; ao receber `pronto`, mostra o preview."""
+    """Menu de links: aceita colar vários (texto) e ANEXA com dedupe (R14)."""
     conversa = gerenciador.obter(update.effective_user.id)
     texto = update.message.text.strip()
     if texto.lower() == PRONTO:
@@ -686,12 +768,201 @@ async def editar_links(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Es
             return EstadoConversa.EDITAR_LINKS
         return await _enviar_preview(update, conversa)
     links, invalidas = parse_links(texto)
-    if links:
-        conversa.rascunho.links = links
-        await update.message.reply_text(f"🔗 {len(links)} link(s) definido(s). Envie *pronto* para concluir.", parse_mode="Markdown")
+    adicionados = 0
+    for link in links:
+        if not any(l.tipo == link.tipo and l.url == link.url for l in conversa.rascunho.links):
+            conversa.rascunho.links.append(link)
+            adicionados += 1
+    if adicionados:
+        await update.message.reply_text(f"🔗 {adicionados} link(s) adicionado(s).")
     if invalidas:
         await update.message.reply_text("⚠️ Não entendi: " + "; ".join(invalidas))
+    return await _enviar_menu_links(update, conversa)
+
+
+# ALTERADO [21/10/2026]: gerenciador de links por botões (alterar/remover/adicionar).
+async def editar_link_abrir(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Abre o submenu de um link (alterar/remover/voltar)."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    conversa = gerenciador.obter(query.from_user.id)
+    indice = _indice_callback(query.data)
+    if not 0 <= indice < len(conversa.rascunho.links):
+        await query.message.reply_text("⚠️ Link inválido. Use o menu novamente.")
+        return await _enviar_menu_links(update, conversa)
+    link = conversa.rascunho.links[indice]
+    await query.message.reply_text(
+        f"🔗 *{_md(link.tipo)}*: {_md(link.url)}\nO que deseja fazer?",
+        parse_mode="Markdown",
+        reply_markup=teclado_link_item(indice),
+    )
     return EstadoConversa.EDITAR_LINKS
+
+
+async def editar_link_alterar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Pede o novo valor (identifier/URL) de um link existente."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    conversa = gerenciador.obter(query.from_user.id)
+    indice = _indice_callback(query.data)
+    if not 0 <= indice < len(conversa.rascunho.links):
+        await query.message.reply_text("⚠️ Link inválido. Use o menu novamente.")
+        return await _enviar_menu_links(update, conversa)
+    link = conversa.rascunho.links[indice]
+    conversa.link_indice = indice
+    conversa.link_tipo = link.tipo
+    await query.message.reply_text(
+        f"✏️ Envie o novo valor para *{_md(link.tipo)}* (identificador ou URL completa).\n"
+        f"Atual: {_md(link.url)}",
+        parse_mode="Markdown",
+    )
+    return EstadoConversa.LINK_VALOR
+
+
+async def editar_link_valor(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Aplica o valor digitado (via template ou URL completa) e volta ao menu."""
+    conversa = gerenciador.obter(update.effective_user.id)
+    if conversa.link_tipo is None:
+        await update.message.reply_text("⚠️ Sessão expirada. Use /editar para recomeçar.")
+        return ConversationHandler.END
+    try:
+        url = link_template.montar_url(conversa.link_tipo, update.message.text)
+    except ValueError as erro:
+        await update.message.reply_text(f"⚠️ {erro}")
+        return EstadoConversa.LINK_VALOR
+    link = Link(conversa.link_tipo, url)
+    if conversa.link_indice is None:
+        conversa.rascunho.links.append(link)
+    else:
+        conversa.rascunho.links[conversa.link_indice] = link
+    conversa.link_indice = None
+    conversa.link_tipo = None
+    return await _enviar_menu_links(update, conversa)
+
+
+async def editar_link_remover(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Pede confirmação para remover um link (bloqueia o último — R2)."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    conversa = gerenciador.obter(query.from_user.id)
+    indice = _indice_callback(query.data)
+    if not 0 <= indice < len(conversa.rascunho.links):
+        await query.message.reply_text("⚠️ Link inválido. Use o menu novamente.")
+        return await _enviar_menu_links(update, conversa)
+    if len(conversa.rascunho.links) == 1:
+        await query.message.reply_text("⚠️ A comunidade precisa de ao menos 1 link.")
+        return await _enviar_menu_links(update, conversa)
+    conversa.link_indice = indice
+    link = conversa.rascunho.links[indice]
+    teclado = InlineKeyboardMarkup(
+        [[
+            InlineKeyboardButton("🗑️ Remover", callback_data="edit_lk_rmok"),
+            InlineKeyboardButton("❌ Cancelar", callback_data="edit_lk_rmno"),
+        ]]
+    )
+    await query.message.reply_text(
+        f"🗑️ Remover *{_md(link.tipo)}* ({_md(link.url)})?",
+        parse_mode="Markdown",
+        reply_markup=teclado,
+    )
+    return EstadoConversa.LINK_REMOCAO_CONFIRMACAO
+
+
+async def editar_link_remocao_confirmar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Confirma ou cancela a remoção do link."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    conversa = gerenciador.obter(query.from_user.id)
+    if query.data == "edit_lk_rmno":
+        conversa.link_indice = None
+        return await _enviar_menu_links(update, conversa)
+    indice = conversa.link_indice
+    conversa.link_indice = None
+    if indice is None or not 0 <= indice < len(conversa.rascunho.links):
+        await query.message.reply_text("⚠️ Link inválido.")
+        return await _enviar_menu_links(update, conversa)
+    if len(conversa.rascunho.links) == 1:
+        await query.message.reply_text("⚠️ A comunidade precisa de ao menos 1 link.")
+        return await _enviar_menu_links(update, conversa)
+    del conversa.rascunho.links[indice]
+    return await _enviar_menu_links(update, conversa)
+
+
+async def editar_link_adicionar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Mostra o catálogo de tipos para adicionar um link."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    await query.message.reply_text(
+        "🔗 Escolha o *tipo* do novo link:", parse_mode="Markdown", reply_markup=teclado_tipos()
+    )
+    return EstadoConversa.EDITAR_LINKS
+
+
+async def editar_link_tipo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Recebe o tipo escolhido e pede o valor do novo link."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    conversa = gerenciador.obter(query.from_user.id)
+    indice = _indice_callback(query.data)
+    if not 0 <= indice < len(TIPOS_LINK):
+        await query.message.reply_text("⚠️ Tipo inválido.")
+        return await _enviar_menu_links(update, conversa)
+    conversa.link_indice = None
+    conversa.link_tipo = TIPOS_LINK[indice]
+    dica = (
+        "URL completa"
+        if link_template.precisa_url_completa(conversa.link_tipo)
+        else "identificador (ex.: usuário) ou URL completa"
+    )
+    await query.message.reply_text(
+        f"🔗 Envie o valor para *{_md(conversa.link_tipo)}* ({dica}).", parse_mode="Markdown"
+    )
+    return EstadoConversa.LINK_VALOR
+
+
+async def editar_link_concluir(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Conclui a edição de links (exige ao menos 1) e vai ao preview."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    conversa = gerenciador.obter(query.from_user.id)
+    if not conversa.rascunho.links:
+        await query.message.reply_text("⚠️ Informe ao menos 1 link antes de concluir.")
+        return EstadoConversa.EDITAR_LINKS
+    return await _enviar_preview(update, conversa)
+
+
+async def editar_link_voltar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Volta ao menu de links."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    conversa = gerenciador.obter(query.from_user.id)
+    conversa.link_indice = None
+    return await _enviar_menu_links(update, conversa)
+
 
 
 # ---------------------------------------------------------------------------
@@ -1036,7 +1307,20 @@ def montar_conversation_handler() -> ConversationHandler:
         ],
         EstadoConversa.EDITAR_ESCOLHA: [CallbackQueryHandler(editar_escolha, pattern="^edit_(nome|links|ambos)$")],
         EstadoConversa.EDITAR_NOVO_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_novo_nome)],
-        EstadoConversa.EDITAR_LINKS: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_links)],
+        EstadoConversa.EDITAR_LINKS: [
+            CallbackQueryHandler(editar_link_abrir, pattern=PADRAO_LINK_ABRIR),
+            CallbackQueryHandler(editar_link_alterar, pattern=PADRAO_LINK_ALTERAR),
+            CallbackQueryHandler(editar_link_remover, pattern=PADRAO_LINK_REMOVER),
+            CallbackQueryHandler(editar_link_adicionar, pattern=PADRAO_LINK_ADICIONAR),
+            CallbackQueryHandler(editar_link_tipo, pattern=PADRAO_LINK_TIPO),
+            CallbackQueryHandler(editar_link_concluir, pattern=PADRAO_LINK_CONCLUIR),
+            CallbackQueryHandler(editar_link_voltar, pattern=PADRAO_LINK_VOLTAR),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, editar_links),
+        ],
+        EstadoConversa.LINK_VALOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_link_valor)],
+        EstadoConversa.LINK_REMOCAO_CONFIRMACAO: [
+            CallbackQueryHandler(editar_link_remocao_confirmar, pattern=PADRAO_LINK_REMOCAO)
+        ],
         EstadoConversa.REMOVER_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, remover_nome)],
         EstadoConversa.REMOVER_CANDIDATOS: [
             CallbackQueryHandler(remover_candidato, pattern=PADRAO_CANDIDATOS_REMOVER),

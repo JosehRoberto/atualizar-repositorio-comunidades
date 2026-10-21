@@ -35,6 +35,9 @@ class EstadoConversa(Enum):
     EDITAR_ESCOLHA = "editar_escolha"
     EDITAR_NOVO_NOME = "editar_novo_nome"
     EDITAR_LINKS = "editar_links"
+    # ALTERADO [21/10/2026]: desvio opcional — gerenciador de links (valor/remoção).
+    LINK_VALOR = "link_valor"
+    LINK_REMOCAO_CONFIRMACAO = "link_remocao_confirmacao"
     # Remover comunidade
     REMOVER_NOME = "remover_nome"
     REMOVER_CANDIDATOS = "remover_candidatos"
@@ -83,6 +86,8 @@ ORDEM_POR_ACAO: dict[Acao, list[EstadoConversa]] = {
         EstadoConversa.EDITAR_ESCOLHA,
         EstadoConversa.EDITAR_NOVO_NOME,
         EstadoConversa.EDITAR_LINKS,
+        EstadoConversa.LINK_VALOR,
+        EstadoConversa.LINK_REMOCAO_CONFIRMACAO,
         EstadoConversa.PREVIEW,
         EstadoConversa.APROVACAO,
     ],
@@ -112,6 +117,8 @@ class ConversaUsuario:
     secao_alvo: str | None = None
     campo_editar: str | None = None
     candidatos: list[tuple[str, str, str]] = field(default_factory=list)
+    link_indice: int | None = None
+    link_tipo: str | None = None
     backup_escolhido: str | None = None
     hash_base: str | None = None
     iniciada_em: datetime | None = None
@@ -129,6 +136,8 @@ class ConversaUsuario:
         self.secao_alvo = None
         self.campo_editar = None
         self.candidatos = []
+        self.link_indice = None
+        self.link_tipo = None
         self.backup_escolhido = None
         self.hash_base = None
         self.iniciada_em = None
@@ -188,6 +197,14 @@ class GerenciadorEstado:
                 if conversa.campo_editar == CAMPO_AMBOS:
                     return EstadoConversa.EDITAR_LINKS
                 return EstadoConversa.PREVIEW
+            # ALTERADO [21/10/2026]: gerenciador de links é desvio opcional.
+            if conversa.estado is EstadoConversa.EDITAR_LINKS:
+                return EstadoConversa.PREVIEW
+            if conversa.estado in (
+                EstadoConversa.LINK_VALOR,
+                EstadoConversa.LINK_REMOCAO_CONFIRMACAO,
+            ):
+                return EstadoConversa.EDITAR_LINKS
 
         if conversa.acao is Acao.REMOVER and conversa.estado is EstadoConversa.REMOVER_NOME:
             return EstadoConversa.REMOVER_CONFIRMACAO
