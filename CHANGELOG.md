@@ -5,6 +5,14 @@
 
 ## [Unreleased]
 
+### Segurança (21/10/2026) — Rotação do token GitLab concluída
+
+- **Segurança:** token antigo **revogado**; exposição local eliminada (`~/.git-credentials`, URL do
+  remote do clone antigo e backup removidos). Novo token `comunidades-bot` (`api`,
+  `write_repository`; expira em 20/10/2027) validado via API (`/personal_access_tokens/self`, HTTP 200)
+  e cadastrado em `bot/.env` (ignorado).
+- **Arquivos:** `docs/requisitos.md` (§3 item 4).
+
 ### Segurança (21/10/2026) — Exposição local do token GitLab removida
 
 - **Segurança:** token removido de `~/.git-credentials` (backup com permissão `600`) e da URL do
