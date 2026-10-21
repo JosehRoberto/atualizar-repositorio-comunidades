@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### Documentação (21/10/2026) — `docs/nova-sessao.md` sincronizado
+
+- **Alterado:** `Estado atual` atualizado — commits de docs, `bot/.env` já existente (com
+  `GITLAB_TOKEN` validado; faltam as variáveis do Telegram) e rotação do token concluída.
+- **Arquivos:** `docs/nova-sessao.md`.
+
 ### Segurança (21/10/2026) — Rotação do token GitLab concluída
 
 - **Segurança:** token antigo **revogado**; exposição local eliminada (`~/.git-credentials`, URL do

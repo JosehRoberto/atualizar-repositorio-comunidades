@@ -35,6 +35,7 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
 - Git: `main` sincronizada com `origin/main`.
   - `8af47a3` — estrutura inicial (docs, `AGENTS.md`, `.gitignore`, pastas).
   - `ec67e9e` — esqueleto do bot.
+  - Docs subsequentes: `e83f6fa`, `3d7e9fd`, `04125e9`, `33081da` (handoff, sincronização, segurança).
 - `bot/`:
   - `config.py` — lê `.env` (`Config`, `validar()`), sem segredos hardcoded.
   - `main.py` — logging (silencia `httpx`/`httpcore`) + `run_polling`.
@@ -46,7 +47,10 @@ edge cases) e **aguarde aprovação** antes de implementar (AGENTS.md §10).
   - `tests/` — 12 testes herméticos (config, modelo, schemas) **passando**.
 - Raiz: `pytest.ini`, `requirements-test.txt`, `README.md`, `bot/requirements.txt`,
   `bot/.env.example`.
-- **Ainda não há** regras de negócio do README, serviços, fluxo conversacional completo, nem `.env`.
+- `bot/.env` **existe** (não versionado): `GITLAB_TOKEN` (token `comunidades-bot`) já validado;
+  faltam `TELEGRAM_BOT_TOKEN` e `TELEGRAM_ALLOWED_USER_IDS`.
+- Segurança: rotação do token GitLab **concluída** (token antigo revogado; exposição local removida).
+- **Ainda não há** regras de negócio do README, serviços nem fluxo conversacional completo.
 
 ### Próximos passos (ordem recomendada)
 
