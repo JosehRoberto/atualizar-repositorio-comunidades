@@ -44,7 +44,7 @@ formatação Markdown existentes, com backup, preview, aprovação explícita e 
 | Versão | `v0.4.0` (tag anotada) |
 | Python | Python 3.12 |
 | Biblioteca | `python-telegram-bot` 22.7 (v20+) |
-| Testes | **305** herméticos |
+| Testes | **330** herméticos |
 
 **Escopo do cadastro (schema real do README):**
 - Cada comunidade tem **apenas `nome` + `links`** (`| Comunidade | Links |`) — sem cidade,
@@ -101,14 +101,15 @@ atualizar-repositorio-comunidades/
 │   │   ├── git_service.py             ← fetch/pull/commit/branch/push/MR via `GITLAB_TOKEN`
 │   │   ├── validacao_service.py       ← validações §2.8 + `🧩 Validar README`
 │   │   ├── busca_service.py            ← match exato/fuzzy + candidatos (§2.10)
+│   │   ├── link_template.py            ← templates tipo→URL (entrada por handle; §2.4)
 │   │   └── escrita_service.py         ← `asyncio.Lock` + sync + recheck de hash (§2.12)
 │   ├── history/                        ← `historico.jsonl` (não versionado)
-│   └── tests/                          ← pytest (305 testes herméticos)
+│   └── tests/                          ← pytest (330 testes herméticos)
 │       ├── conftest.py
 │       ├── test_config.py, test_models.py, test_schemas.py
 │       ├── test_readme_service.py, test_backup_service.py, test_historico_service.py
 │       ├── test_validacao_service.py, test_busca_service.py, test_git_service.py,
-│       │   test_escrita_service.py
+│       │   test_escrita_service.py, test_link_template.py
 │       └── test_state_manager.py, test_menu.py, test_publicacao.py, test_commands.py
 ├── repositorio/                        ← clone do repositório alvo (GitLab) — ignorado no git
 │   ├── README.md                       ← alvo das edições do bot (fonte da verdade)
@@ -172,6 +173,9 @@ atualizar-repositorio-comunidades/
   commita antes de sincronizar e usa `pull --rebase`; `/restaurar` roda sob o lock.
 - **`/editar` híbrido por lista**: botão "📋 Listar comunidades" (seções → comunidades, paginado;
   callback `edit_lst_<i>`), com estado de desvio `EDITAR_LISTA`; seleção segue para a edição.
+- **Gerenciador de links**: no `/editar`, links por botões (alterar/remover/adicionar); entrada por
+  **identificador** com template (`link_template.py`), URL completa com precedência; remoção do último
+  link bloqueada.
 - **Guard de segurança**: `TELEGRAM_ALLOWED_USER_IDS` em todos os handlers.
 - **Segurança**: logging `httpx`/`httpcore` em `WARNING` (token do bot não vaza) e `PTBUserWarning`
   esperado silenciado em `main.py`.
@@ -460,7 +464,11 @@ enquanto o serviço roda.
 > `CHANGELOG.md`.
 
 **Últimas mudanças (resumo):**
-- **21/10/2026** — **`/editar` híbrido com lista** (pré-`v0.6.0`): botão "📋 Listar comunidades"
+- **21/10/2026** — **Gerenciador de links por botões** (pré-`v0.7.0`): menu de links no `/editar`
+  (alterar/remover/adicionar), entrada por handle com `link_template.py` (URL completa com
+  precedência) e bloqueio do último link. **+25 testes**; suíte em **330**. Planejamento em
+  `docs/planejamento-edicao-links-botoes.md` (v1.1, riscos R1–R18).
+- **21/10/2026** — **`/editar` híbrido com lista** (`v0.6.0`): botão "📋 Listar comunidades"
   (seções → comunidades, paginado; callback `edit_lst_<i>`), estado de desvio `EDITAR_LISTA`,
   reuso do handler de candidatos. **+15 testes**; suíte em **305**. Planejamento em
   `docs/planejamento-editar-lista-botoes.md` (v1.1, riscos R1–R16).

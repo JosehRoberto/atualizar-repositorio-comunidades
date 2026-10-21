@@ -92,6 +92,11 @@ preview, aprovação explícita e publicação controlada (commit / branch / pus
 
 - **Template da linha:**
   `` | **NOME** [MARCADOR] | <a href="URL" title="TIPO"><img src="https://img.shields.io/badge/TIPO-COR?logo=LOGO&logoColor=white" alt="TIPO"/></a> ... | ``
+- **Entrada de valor por tipo (`bot/services/link_template.py`, 21/10/2026):** ao editar/adicionar um
+  link, o usuário pode enviar apenas o **identificador** (ex.: Instagram → `usuario`); tipos com base
+  previsível montam a URL por template (Instagram, GitHub, GitLab, Facebook, X, YouTube, Telegram,
+  Meetup, LinkTree, LinkedIn, WhatsApp). Uma **URL completa** (`http(s://`) tem **precedência** e é
+  usada como está; tipos sem template (Site, Google Drive, Slack, Discord, Outros) exigem URL completa.
 - **Normalização aplicada somente à linha inserida/editada** (item 9: alteração cirúrgica). As demais
   linhas do README **não** são reformatadas.
 - Inconsistências existentes no README (ex.: badge Meetup com cor `E4405F`, LinkTree com `E4405F`,

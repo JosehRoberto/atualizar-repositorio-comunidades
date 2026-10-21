@@ -5,6 +5,27 @@
 
 ## [Unreleased]
 
+### v0.7.0 (21/10/2026) — Gerenciador de links por botões no `/editar`
+
+- **Adicionado:** menu **Links** no `/editar` com botões por link — **alterar valor**, **remover**
+  (com confirmação) e **adicionar** pelo catálogo de tipos; o modo **colar vários** (texto) segue
+  disponível e **anexa com dedupe**.
+- **Adicionado:** `bot/services/link_template.py` — entrada por **identificador** (handle) para tipos
+  com base previsível (Instagram, GitHub, Telegram, …); **URL completa tem precedência**; tipos sem
+  template (Site, Google Drive, Slack, Discord) exigem URL completa.
+- **Alterado:** `bot/handlers/menu.py` — `EDITAR_LINKS` vira **menu de links** (callbacks); submenu
+  por link; "Links" e "Nome e links" abrem o mesmo menu.
+- **Alterado:** `bot/handlers/state_manager.py` (região protegida §3.1) — estados `LINK_VALOR` e
+  `LINK_REMOCAO_CONFIRMACAO` e campos `link_indice`/`link_tipo` (limpos no `reset()`).
+- **Regra:** **remoção do último link é bloqueada** (invariante "ao menos 1 link").
+- **Testes:** +25 herméticos (templates, menu/submenu, remover/adicionar, dedupe, autorização,
+  estado). Suíte em **330**.
+- **Validado:** `py_compile` OK; import de `create_application` OK; `pytest bot/tests/` → **330 passed**.
+- **Planejamento:** `docs/planejamento-edicao-links-botoes.md` (v1.1, riscos R1–R18).
+- **Arquivos:** `bot/services/link_template.py` (novo), `bot/handlers/menu.py`,
+  `bot/handlers/state_manager.py`, `bot/tests/test_link_template.py` (novo), `bot/tests/test_menu.py`,
+  `bot/tests/test_state_manager.py`.
+
 ### v0.6.0 (21/10/2026) — `/editar` híbrido com lista de comunidades em botões
 
 - **Adicionado:** `/editar` oferece o botão **"📋 Listar comunidades"** além do nome digitado —

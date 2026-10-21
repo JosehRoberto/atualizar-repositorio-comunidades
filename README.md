@@ -57,6 +57,10 @@ de digitação), registrado no boot via `set_my_commands`.
 > bloqueados (use `/publicar` ou `/restaurar`). O `/publicar` commita a edição pendente e sincroniza
 > com o remoto (`fetch` + `pull --rebase`) antes do `push`.
 
+> **Edição de links:** em `/editar`, o menu **Links** permite **adicionar**, **alterar** e **remover**
+> um link por botões. Para tipos com base previsível (Instagram, GitHub, Telegram, …) basta enviar o
+> **identificador** (ex.: `usuario`); uma **URL completa** também é aceita e tem precedência.
+
 ## Uso
 
 ```bash
