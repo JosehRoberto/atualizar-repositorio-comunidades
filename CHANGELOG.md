@@ -5,6 +5,23 @@
 
 ## [Unreleased]
 
+### Documentação (21/10/2026) — Prompt de continuidade canônico (`prompts/nova-conversa.md`)
+
+- **Adicionado:** `prompts/nova-conversa.md` — handoff canônico para abrir uma nova sessão do
+  OpenCode, com a mesma estrutura/metodologia de `agendatipara-bot/prompts/nova-conversa.md`:
+  prompt inicial (lista de leitura), visão geral, estrutura, estado atual, fluxo, regras técnicas
+  críticas, comandos do terminal, regras do agente, fluxo de atualização/deploy, próximos passos,
+  soluções encontradas e ponteiro para o `CHANGELOG.md`.
+- **Migrado:** detalhe do usuário autorizado (`TELEGRAM_ALLOWED_USER_IDS` = `87681147`) de
+  `docs/nova-sessao.md` para o novo documento; `docs/nova-sessao.md` permanece como handoff anterior.
+- **Alterado:** `docs/requisitos.md §6` passa a apontar `prompts/nova-conversa.md` como handoff
+  canônico da próxima sessão.
+- **Alterado:** `docs/nova-sessao.md` — nota de cabeçalho marcando-o como documento histórico
+  (fase de construção), com o handoff canônico em `prompts/nova-conversa.md`.
+- **Alterado:** `README.md` — a estrutura do projeto passa a listar `prompts/` e a seção
+  "Documentação" cita o handoff para nova sessão.
+- **Arquivos:** `prompts/nova-conversa.md`, `docs/requisitos.md`, `docs/nova-sessao.md`, `README.md`.
+
 ## [0.2.0] - 2026-10-21
 
 ### Corrigido (21/10/2026) — `PTBUserWarning` no log do serviço

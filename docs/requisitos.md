@@ -314,4 +314,6 @@ atualizar-repositorio-comunidades/
    - **Deploy systemd: concluído** (`bot/atualizar-repositorio-bot.service` + `.venv` com as
      dependências); falta apenas a instalação da unit (passo `sudo` do usuário).
 
-> Handoff detalhado para a próxima sessão: `docs/nova-sessao.md`.
+> Handoff canônico para a próxima sessão: `prompts/nova-conversa.md` (estado atual, fluxo, regras
+> técnicas, comandos, deploy e próximos passos). O antigo `docs/nova-sessao.md` permanece como
+> handoff da fase de construção (histórico).

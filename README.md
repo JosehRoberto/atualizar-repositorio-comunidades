@@ -61,7 +61,8 @@ o `.env`.
 atualizar-repositorio-comunidades/
 ├── bot/                  ← código (config, main, handlers, models, schemas, services, tests)
 ├── backup/               ← backups (README_YYYYMMDD_HHMMSS.bak) — não versionado
-├── docs/                 ← requisitos, prompts, planejamentos
+├── docs/                 ← requisitos, planejamentos
+├── prompts/              ← handoff para nova sessão (nova-conversa.md)
 └── repositorio/          ← clone do repositório alvo (GitLab) — não versionado
 ```
 
@@ -107,3 +108,4 @@ Mantenha **instância única** (duas instâncias causam `409 Conflict` no `getUp
 - Escopo e decisões: `docs/requisitos.md`.
 - Guia de operação para agentes: `AGENTS.md`.
 - Histórico de mudanças: `CHANGELOG.md`.
+- Handoff para nova sessão: `prompts/nova-conversa.md`.

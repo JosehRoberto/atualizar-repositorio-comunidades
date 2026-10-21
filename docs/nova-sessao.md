@@ -1,5 +1,8 @@
 # Nova sessão — continuidade do desenvolvimento
 
+> ⚠️ **Documento histórico** (fase de construção do bot). O handoff **canônico** para iniciar uma
+> nova sessão é **`prompts/nova-conversa.md`** — consulte-o primeiro.
+
 > **Prompt para uso no chat do OpenCode (nova sessão).**
 > Copie o texto da seção "Prompt" abaixo como primeira mensagem.
 
