@@ -1,0 +1,21 @@
+[Unit]
+Description=Bot Telegram para atualizar o repositorio de comunidades (ParaLivre)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=roberto
+Group=roberto
+WorkingDirectory=/home/roberto/projetos/atualizar-repositorio-comunidades
+EnvironmentFile=-/home/roberto/projetos/atualizar-repositorio-comunidades/bot/.env
+ExecStart=/home/roberto/projetos/atualizar-repositorio-comunidades/.venv/bin/python -m bot.main
+Restart=on-failure
+RestartSec=5
+
+# Instancia unica: o systemd garante um unico processo deste servico, evitando
+# 409 Conflict no getUpdates (duas instancias do bot).
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target
