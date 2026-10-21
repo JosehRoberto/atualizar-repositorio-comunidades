@@ -1,0 +1,27 @@
+# Clone do repositório alvo (repositório git aninhado)
+repositorio/
+
+# Backups operacionais gerados pelo bot
+backup/*.bak
+
+# Segredos e ambiente
+.env
+bot/.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Estado e histórico do bot
+bot/state/
+bot/history/
+
+# Logs
+*.log
