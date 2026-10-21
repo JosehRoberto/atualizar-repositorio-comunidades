@@ -1,10 +1,10 @@
 # Planejamento de Correção: escape Markdown nas mensagens do bot
 
 **Data:** 21/10/2026
-**Versão:** 1.2
+**Versão:** 1.3
 **Foco:** `bot/handlers/` (mensagens enviadas ao Telegram)
-**Status:** **implementado e validado** (235 testes); diagnóstico confirmado (§14.1); revisão de
-risco R1–R4 incorporada (§12). Pendentes: R6 (restart systemd) e commit (§12.1).
+**Status:** **implementado, validado e em produção** (235 testes; restart systemd efetivado).
+Diagnóstico confirmado (§14.1); revisão de risco R1–R4 incorporada (§12); R6 concluído.
 
 ---
 
@@ -246,7 +246,7 @@ regressão.
 - [x] Planejamento (aprovação antes de implementar): Seção 10 — aprovado pelo usuário
 - [x] Checklist: Seção 11
 - [x] Git/commit: Seção 12 — mensagem em §9
-- [ ] Deploy/systemd: Seção 13 — **pendente** restart (R6, requer `sudo`)
+- [x] Deploy/systemd: Seção 13 — restart efetivado (R6 concluído; bot `active`, instância única)
 - [x] Diagnóstico/risco: Seções 14.1 e 14.3 — §2 e §5
 - [x] Análise de Riscos de Funcionamento e Mitigações: R1–R4 com teste de regressão — §12
 - [x] CHANGELOG: Seção 15 — entradas em `[Unreleased]`
