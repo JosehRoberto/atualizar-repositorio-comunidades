@@ -44,7 +44,7 @@ formatação Markdown existentes, com backup, preview, aprovação explícita e 
 | Versão | `v0.4.0` (tag anotada) |
 | Python | Python 3.12 |
 | Biblioteca | `python-telegram-bot` 22.7 (v20+) |
-| Testes | **270** herméticos |
+| Testes | **305** herméticos |
 
 **Escopo do cadastro (schema real do README):**
 - Cada comunidade tem **apenas `nome` + `links`** (`| Comunidade | Links |`) — sem cidade,
@@ -103,7 +103,7 @@ atualizar-repositorio-comunidades/
 │   │   ├── busca_service.py            ← match exato/fuzzy + candidatos (§2.10)
 │   │   └── escrita_service.py         ← `asyncio.Lock` + sync + recheck de hash (§2.12)
 │   ├── history/                        ← `historico.jsonl` (não versionado)
-│   └── tests/                          ← pytest (270 testes herméticos)
+│   └── tests/                          ← pytest (305 testes herméticos)
 │       ├── conftest.py
 │       ├── test_config.py, test_models.py, test_schemas.py
 │       ├── test_readme_service.py, test_backup_service.py, test_historico_service.py
@@ -167,6 +167,11 @@ atualizar-repositorio-comunidades/
 - **Consulta**: `/listar`, `/validar` e `/historico`.
 - **Menu nativo de comandos**: `bot.set_my_commands` registrado no `post_init` (via
   `create_application()`), populando o botão "Menu" do app; `COMANDOS_MENU` é fonte única do `/start`.
+- **Bloqueio de edição com publicação pendente**: `/nova`/`/editar`/`/remover` são bloqueados
+  enquanto o README tiver alterações não publicadas (pendência restrita ao README); `/publicar`
+  commita antes de sincronizar e usa `pull --rebase`; `/restaurar` roda sob o lock.
+- **`/editar` híbrido por lista**: botão "📋 Listar comunidades" (seções → comunidades, paginado;
+  callback `edit_lst_<i>`), com estado de desvio `EDITAR_LISTA`; seleção segue para a edição.
 - **Guard de segurança**: `TELEGRAM_ALLOWED_USER_IDS` em todos os handlers.
 - **Segurança**: logging `httpx`/`httpcore` em `WARNING` (token do bot não vaza) e `PTBUserWarning`
   esperado silenciado em `main.py`.
@@ -455,7 +460,15 @@ enquanto o serviço roda.
 > `CHANGELOG.md`.
 
 **Últimas mudanças (resumo):**
-- **21/10/2026** — **Menu nativo de comandos** (pré-`v0.4.0`): `COMANDOS_MENU` (fonte única) +
+- **21/10/2026** — **`/editar` híbrido com lista** (pré-`v0.6.0`): botão "📋 Listar comunidades"
+  (seções → comunidades, paginado; callback `edit_lst_<i>`), estado de desvio `EDITAR_LISTA`,
+  reuso do handler de candidatos. **+15 testes**; suíte em **305**. Planejamento em
+  `docs/planejamento-editar-lista-botoes.md` (v1.1, riscos R1–R16).
+- **21/10/2026** — **Bloqueio de edição com publicação pendente** (`v0.5.0`): guarda em
+  `/nova`/`/editar`/`/remover`; `/publicar` commita antes de sincronizar (`pull --rebase`);
+  `/restaurar` sob lock. **+20 testes** (R1–R5, R10, R11); suíte em **290**. Planejamento em
+  `docs/planejamento-guarda-publicacao-pendente.md` (v1.1, riscos R1–R11).
+- **21/10/2026** — **Menu nativo de comandos** (`v0.4.0`): `COMANDOS_MENU` (fonte única) +
   `post_init` registram `set_my_commands` no boot; `/start` deriva o texto da mesma lista; falha de
   rede não derruba o polling. **+12 testes** (`bot/tests/test_commands.py`); suíte em **270**.
   Planejamento em `docs/planejamento-menu-comandos-telegram.md` (v1.1, riscos R1–R9).

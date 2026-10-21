@@ -180,6 +180,12 @@ candidatos ranqueados. Em `/buscar`, a lista é exibida em texto; em `/editar` e
 usuário escolhe por botões (`EDITAR_CANDIDATOS`/`REMOVER_CANDIDATOS`); candidato único é
 selecionado automaticamente. Nomes homônimos exibem o primeiro link como desempate.
 
+**`/editar` por lista (21/10/2026):** além de digitar o nome, `/editar` oferece o botão
+**"📋 Listar comunidades"** — navegação híbrida em **dois níveis** (seções → comunidades), com
+paginação (8 itens/página) e "↩️ Seções"; a seleção reusa o handler de candidatos (prefixo
+`edit_lst_<i>`) e segue para o fluxo de edição. Estado de desvio `EDITAR_LISTA`. Descrição completa
+em `docs/planejamento-editar-lista-botoes.md`.
+
 ### 2.11 Rollback (item 11)
 Solução proposta:
 - `/restaurar` passa a ser **novo item do menu principal** (além de "↩️ Cancelar", que continua
@@ -197,6 +203,14 @@ Solução proposta:
 - **Sincronização:** antes de qualquer edição, `git fetch` + `git pull --ff-only` (ou verificação de
   `HEAD` x `origin/master`). Se houver divergência local ou alteração remota conflitante, abortar e
   avisar, em vez de sobrescrever.
+- **Bloqueio de edição com publicação pendente (21/10/2026):** `/nova`, `/editar` e `/remover` são
+  bloqueados enquanto o README tiver alterações **não publicadas** (pendência restrita ao README —
+  arquivos alheios/untracked não bloqueiam); a mensagem orienta usar `/publicar` ou `/restaurar`.
+  Reforço aplicado também no passo de gravação (após o `asyncio.Lock`).
+- **Publicação (`/publicar`) com remoto à frente (21/10/2026):** antes de enviar, commita a edição
+  pendente **e** sincroniza com `git fetch` + `git pull --rebase` (a gravação continua com
+  `--ff-only`); conflito no rebase ⇒ `git rebase --abort` (commits locais preservados). `/restaurar`
+  roda sob o mesmo `asyncio.Lock`.
 - **Proteção adicional:** registrar hash do README lido na aprovação e reconferir o hash antes de
   gravar; se mudou, exigir novo preview.
 

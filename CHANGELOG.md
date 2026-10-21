@@ -5,6 +5,49 @@
 
 ## [Unreleased]
 
+### v0.6.0 (21/10/2026) — `/editar` híbrido com lista de comunidades em botões
+
+- **Adicionado:** `/editar` oferece o botão **"📋 Listar comunidades"** além do nome digitado —
+  navegação em **dois níveis** (seções → comunidades) com **paginação** (8 itens/página) e
+  "↩️ Seções" (`bot/handlers/menu.py`).
+- **Adicionado:** estado de desvio `EDITAR_LISTA` em `bot/handlers/state_manager.py` (região
+  protegida §3.1) — análogo a `EDITAR_CANDIDATOS`.
+- **Decisão:** a seleção vinda da lista usa o prefixo de callback **`edit_lst_<i>`** (separa a origem
+  lista × fuzzy), **reusando** o handler `editar_candidato` e o desempate por URL; callback por
+  **índice** (≤ 64 bytes).
+- **Alterado:** `cmd_editar` envia a pergunta com o teclado do botão de listagem; o modo texto é
+  mantido (híbrido).
+- **Regiões protegidas (§3.1):** `state_manager.py`, `menu.py` — comentários `# ALTERADO [21/10/2026]`.
+- **Testes:** +15 herméticos (teclados, paginação, seleção, voltar, autorização, índice inválido).
+  Suíte em **305**.
+- **Validado:** `py_compile` OK; import de `create_application` OK; `pytest bot/tests/` → **305 passed**.
+- **Planejamento:** `docs/planejamento-editar-lista-botoes.md` (v1.1, riscos R1–R16).
+- **Arquivos:** `bot/handlers/menu.py`, `bot/handlers/state_manager.py`, `bot/tests/test_menu.py`.
+
+### v0.5.0 (21/10/2026) — Bloqueio de edição com publicação pendente
+
+- **Adicionado:** `bot/handlers/menu.py` — guarda em `/nova`, `/editar` e `/remover` que bloqueia
+  nova edição enquanto o README tiver alterações **não publicadas** (pendência **restrita ao README**),
+  com reforço no passo de gravação (após o `asyncio.Lock`); mensagem orienta `/publicar` ou `/restaurar`.
+- **Alterado:** `bot/handlers/publicacao.py` — `/publicar` **commita a edição pendente antes de
+  sincronizar** e sincroniza com `fetch` + `pull --rebase` (permite publicar com o remoto à frente);
+  `cmd_publicar` considera commits à frente + arquivos sujos; `/restaurar` passa a rodar sob
+  `asyncio.Lock` + `ocupado()`, com orientação pós-restauração.
+- **Adicionado:** `bot/services/git_service.py` — `readme_pendente()` (status restrito ao README),
+  `commits_pendentes()`, `pull_rebase()` (com `rebase --abort` em conflito) e `sincronizar_publicacao()`.
+- **Adicionado:** `bot/services/escrita_service.py` — `MENSAGEM_PUBLICACAO_PENDENTE` e
+  `sincronizar_publicacao_seguro()`.
+- **Corrigido (deadlock):** árvore suja + remoto alterando o README deixava o bot sem saída (a gravação
+  e o `/publicar` falhavam no `pull --ff-only`). O bloqueio elimina a sujeira acumulada e a
+  reordenação do `/publicar` garante a via de saída.
+- **Regiões protegidas (§3.1):** `git_service`, `escrita_service`, `menu.py`, `publicacao.py` —
+  comentários `# ALTERADO [21/10/2026]`.
+- **Testes:** +20 herméticos (R1–R5, R10, R11). Suíte em **290**.
+- **Validado:** `py_compile` OK; import de `create_application` OK; `pytest bot/tests/` → **290 passed**.
+- **Planejamento:** `docs/planejamento-guarda-publicacao-pendente.md` (v1.1, riscos R1–R11).
+- **Arquivos:** `bot/handlers/menu.py`, `bot/handlers/publicacao.py`, `bot/services/git_service.py`,
+  `bot/services/escrita_service.py`, `bot/tests/{test_menu,test_publicacao,test_git_service,test_escrita_service}.py`.
+
 ### v0.4.0 (21/10/2026) — Menu nativo de comandos do Telegram
 
 - **Adicionado:** `bot/handlers/commands.py` — constante `COMANDOS_MENU` (fonte única) e `post_init`,

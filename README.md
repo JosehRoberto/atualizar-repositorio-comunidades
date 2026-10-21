@@ -40,7 +40,7 @@ o `.env`.
 - `/start` — menu principal
 - `/nova` — cadastrar comunidade (nome → links → seção → preview → aprovação)
 - `/buscar` — buscar comunidade
-- `/editar` — editar comunidade (nome e/ou links)
+- `/editar` — editar comunidade (nome e/ou links; ou escolher pela lista de seções/comunidades)
 - `/remover` — remover comunidade
 - `/listar` — listar comunidades por seção
 - `/validar` — validar o README (tabelas, âncoras, duplicidades, marcador)
@@ -51,6 +51,11 @@ o `.env`.
 
 Todos os comandos também aparecem no **menu nativo do Telegram** (botão «Menu», à esquerda do campo
 de digitação), registrado no boot via `set_my_commands`.
+
+> **Fluxo edição → publicação:** as edições gravam o README no clone local e ficam **pendentes** até
+> o `/publicar`. Enquanto houver alterações não publicadas, `/nova`, `/editar` e `/remover` são
+> bloqueados (use `/publicar` ou `/restaurar`). O `/publicar` commita a edição pendente e sincroniza
+> com o remoto (`fetch` + `pull --rebase`) antes do `push`.
 
 ## Uso
 
