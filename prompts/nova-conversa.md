@@ -44,7 +44,7 @@ formatação Markdown existentes, com backup, preview, aprovação explícita e 
 | Versão | `v0.4.0` (tag anotada) |
 | Python | Python 3.12 |
 | Biblioteca | `python-telegram-bot` 22.7 (v20+) |
-| Testes | **330** herméticos |
+| Testes | **337** herméticos |
 
 **Escopo do cadastro (schema real do README):**
 - Cada comunidade tem **apenas `nome` + `links`** (`| Comunidade | Links |`) — sem cidade,
@@ -104,7 +104,7 @@ atualizar-repositorio-comunidades/
 │   │   ├── link_template.py            ← templates tipo→URL (entrada por handle; §2.4)
 │   │   └── escrita_service.py         ← `asyncio.Lock` + sync + recheck de hash (§2.12)
 │   ├── history/                        ← `historico.jsonl` (não versionado)
-│   └── tests/                          ← pytest (330 testes herméticos)
+│   └── tests/                          ← pytest (337 testes herméticos)
 │       ├── conftest.py
 │       ├── test_config.py, test_models.py, test_schemas.py
 │       ├── test_readme_service.py, test_backup_service.py, test_historico_service.py
@@ -464,7 +464,11 @@ enquanto o serviço roda.
 > `CHANGELOG.md`.
 
 **Últimas mudanças (resumo):**
-- **21/10/2026** — **Gerenciador de links por botões** (pré-`v0.7.0`): menu de links no `/editar`
+- **21/10/2026** — **Correção do 1º clique na edição + "Voltar" nos links** (`v0.7.1`):
+  `conversa.estado` sincronizado em `_oferecer_edicao`; botão "↩️ Voltar" no menu de links.
+  **+7 testes**; suíte em **337**. Planejamento em
+  `docs/planejamento-correcao-edit-escolha-link-voltar.md` (v1.1, riscos R1–R7).
+- **21/10/2026** — **Gerenciador de links por botões** (`v0.7.0`): menu de links no `/editar`
   (alterar/remover/adicionar), entrada por handle com `link_template.py` (URL completa com
   precedência) e bloqueio do último link. **+25 testes**; suíte em **330**. Planejamento em
   `docs/planejamento-edicao-links-botoes.md` (v1.1, riscos R1–R18).

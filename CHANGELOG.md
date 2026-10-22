@@ -5,6 +5,24 @@
 
 ## [Unreleased]
 
+### v0.7.1 (21/10/2026) — Correção do 1º clique na edição e "Voltar" no menu de links
+
+- **Corrigido:** no `/editar`, o **primeiro** clique em "Links" exibia "Qual é o novo nome?" (e "Nome"
+  e "Nome e links" retornavam o estado errado). Causa: `_oferecer_edicao` retornava `EDITAR_ESCOLHA`
+  sem atualizar `conversa.estado`; `editar_escolha` calculava o próximo estado via `proximo_estado`,
+  que lia o campo defasado (`EDITAR_NOME`).
+- **Alterado:** `bot/handlers/menu.py` — `_oferecer_edicao`/novo helper `_enviar_escolha_edicao`
+  sincronizam `conversa.estado`; teclado de escolha extraído (`teclado_escolha_edicao`).
+- **Adicionado:** botão **"↩️ Voltar"** no menu de links (`edit_lk_voltar`) retornando à escolha
+  Nome/Links/Nome e links, preservando o rascunho.
+- **Regiões protegidas (§3.1):** `menu.py` — comentários `# ALTERADO [21/10/2026]`. `state_manager.py`
+  **inalterado**.
+- **Testes:** +7 herméticos (1º clique nos 3 botões, sincronização de estado, Voltar, teclado único).
+  Suíte em **337**.
+- **Validado:** `py_compile` OK; import de `create_application` OK; `pytest bot/tests/` → **337 passed**.
+- **Planejamento:** `docs/planejamento-correcao-edit-escolha-link-voltar.md` (v1.1, riscos R1–R7).
+- **Arquivos:** `bot/handlers/menu.py`, `bot/tests/test_menu.py`.
+
 ### v0.7.0 (21/10/2026) — Gerenciador de links por botões no `/editar`
 
 - **Adicionado:** menu **Links** no `/editar` com botões por link — **alterar valor**, **remover**
