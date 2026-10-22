@@ -76,6 +76,7 @@ PADRAO_LINK_ADICIONAR = "^edit_lk_add$"
 PADRAO_LINK_TIPO = r"^edit_lk_tp_(\d+)$"
 PADRAO_LINK_CONCLUIR = "^edit_lk_ok$"
 PADRAO_LINK_VOLTAR = "^edit_lk_back$"
+PADRAO_LINK_VOLTAR_ESCOLHA = "^edit_lk_voltar$"
 PADRAO_LINK_REMOCAO = "^edit_lk_rm(ok|no)$"
 CB_LINK_VOLTAR = "edit_lk_back"
 TIPOS_LINK = (*ORDEM_BADGES, "Outros")
@@ -296,6 +297,7 @@ def teclado_links(links: list[Link]) -> InlineKeyboardMarkup:
             InlineKeyboardButton("✅ Concluir", callback_data="edit_lk_ok"),
         ]
     )
+    linhas.append([InlineKeyboardButton("↩️ Voltar", callback_data="edit_lk_voltar")])
     return InlineKeyboardMarkup(linhas)
 
 
@@ -318,6 +320,18 @@ def teclado_tipos() -> InlineKeyboardMarkup:
         [
             [InlineKeyboardButton(tipo, callback_data=f"edit_lk_tp_{i}")]
             for i, tipo in enumerate(TIPOS_LINK)
+        ]
+    )
+
+
+# ALTERADO [21/10/2026]: teclado único da escolha do que editar (Nome/Links/Nome e links).
+def teclado_escolha_edicao() -> InlineKeyboardMarkup:
+    """Teclado da escolha do que editar."""
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("Nome", callback_data="edit_nome")],
+            [InlineKeyboardButton("Links", callback_data="edit_links")],
+            [InlineKeyboardButton("Nome e links", callback_data="edit_ambos")],
         ]
     )
 
@@ -541,25 +555,30 @@ def _candidato_escolhido(conversa, indice: int):
     return candidatos[0] if candidatos else None
 
 
+async def _enviar_escolha_edicao(update: Update, conversa) -> EstadoConversa:
+    """Envia a escolha do que editar (Nome/Links/Nome e links), mantendo o estado coerente.
+
+    ALTERADO [21/10/2026]: sincroniza `conversa.estado` (origem do bug do 1º clique —
+    `proximo_estado` lê esse campo).
+    """
+    conversa.estado = EstadoConversa.EDITAR_ESCOLHA
+    nome = conversa.rascunho.nome if conversa.rascunho else (conversa.nome_original or "")
+    await _responder(
+        update,
+        f"✏️ Editando *{_md(nome)}*.\nO que deseja alterar?",
+        parse_mode="Markdown",
+        reply_markup=teclado_escolha_edicao(),
+    )
+    return EstadoConversa.EDITAR_ESCOLHA
+
+
 async def _oferecer_edicao(update: Update, conversa, ocorrencia) -> EstadoConversa:
     """Preenche o rascunho e oferece nome/links/ambos para edição."""
     conversa.nome_original = ocorrencia.comunidade.nome
     conversa.rascunho = Comunidade(ocorrencia.comunidade.nome, list(ocorrencia.comunidade.links))
     conversa.secao_alvo = ocorrencia.secao.nome
     conversa.candidatos = []
-    teclado = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("Nome", callback_data="edit_nome")],
-            [InlineKeyboardButton("Links", callback_data="edit_links")],
-            [InlineKeyboardButton("Nome e links", callback_data="edit_ambos")],
-        ]
-    )
-    await _mensagem(update).reply_text(
-        f"✏️ Editando *{_md(ocorrencia.comunidade.nome)}*.\nO que deseja alterar?",
-        parse_mode="Markdown",
-        reply_markup=teclado,
-    )
-    return EstadoConversa.EDITAR_ESCOLHA
+    return await _enviar_escolha_edicao(update, conversa)
 
 
 async def editar_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
@@ -964,6 +983,20 @@ async def editar_link_voltar(update: Update, context: ContextTypes.DEFAULT_TYPE)
     return await _enviar_menu_links(update, conversa)
 
 
+# ALTERADO [21/10/2026]: "Voltar" do menu de links para a escolha Nome/Links/Nome e links.
+async def editar_link_voltar_escolha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> EstadoConversa:
+    """Retorna do menu de links para a escolha do que editar (preserva o rascunho)."""
+    query = update.callback_query
+    await query.answer()
+    if not _autorizado(update):
+        await query.message.reply_text("⛔ Você não está autorizado a usar este bot.")
+        return ConversationHandler.END
+    conversa = gerenciador.obter(query.from_user.id)
+    conversa.link_indice = None
+    conversa.link_tipo = None
+    return await _enviar_escolha_edicao(update, conversa)
+
+
 
 # ---------------------------------------------------------------------------
 # Fluxo: REMOVER
@@ -1315,6 +1348,7 @@ def montar_conversation_handler() -> ConversationHandler:
             CallbackQueryHandler(editar_link_tipo, pattern=PADRAO_LINK_TIPO),
             CallbackQueryHandler(editar_link_concluir, pattern=PADRAO_LINK_CONCLUIR),
             CallbackQueryHandler(editar_link_voltar, pattern=PADRAO_LINK_VOLTAR),
+            CallbackQueryHandler(editar_link_voltar_escolha, pattern=PADRAO_LINK_VOLTAR_ESCOLHA),
             MessageHandler(filters.TEXT & ~filters.COMMAND, editar_links),
         ],
         EstadoConversa.LINK_VALOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_link_valor)],

@@ -844,3 +844,62 @@ class TestLinkManager:
         conv.campo_editar = CAMPO_AMBOS
         estado = await menu.editar_novo_nome(_update_texto("Delphi Novo", uid=1), FakeContext())
         assert estado is EstadoConversa.EDITAR_LINKS
+
+
+# ---------------------------------------------------------------------------
+# Correção: 1º clique na escolha de edição + "Voltar" no menu de links
+# ---------------------------------------------------------------------------
+
+
+class TestCorrecaoEscolhaEdicao:
+    def test_teclado_escolha_edicao(self):
+        assert _callbacks(menu.teclado_escolha_edicao()) == ["edit_nome", "edit_links", "edit_ambos"]
+
+    def test_teclado_links_tem_voltar(self):
+        kb = menu.teclado_links([Link("Site", "https://a")])
+        assert "edit_lk_voltar" in _callbacks(kb)
+
+    @pytest.mark.asyncio
+    async def test_oferecer_edicao_sincroniza_estado(self, ambiente_menu):
+        doc = parse_readme(README_FIXTURE)
+        ocorrencia = doc.buscar("Delphi")
+        conv = gerenciador.iniciar(1, Acao.EDITAR)
+        estado = await menu._oferecer_edicao(_update_texto("Delphi", uid=1), conv, ocorrencia)
+        assert estado is EstadoConversa.EDITAR_ESCOLHA
+        assert conv.estado is EstadoConversa.EDITAR_ESCOLHA
+
+    @pytest.mark.asyncio
+    async def test_primeiro_clique_links(self, ambiente_menu):
+        conv = gerenciador.iniciar(1, Acao.EDITAR, rascunho=Comunidade("Delphi", [Link("Site", "https://a")]))
+        conv.estado = EstadoConversa.EDITAR_ESCOLHA
+        estado = await menu.editar_escolha(FakeUpdate("edit_links"), FakeContext())
+        assert estado is EstadoConversa.EDITAR_LINKS
+
+    @pytest.mark.asyncio
+    async def test_primeiro_clique_nome(self, ambiente_menu):
+        conv = gerenciador.iniciar(1, Acao.EDITAR, rascunho=Comunidade("Delphi", [Link("Site", "https://a")]))
+        conv.estado = EstadoConversa.EDITAR_ESCOLHA
+        estado = await menu.editar_escolha(FakeUpdate("edit_nome"), FakeContext())
+        assert estado is EstadoConversa.EDITAR_NOVO_NOME
+
+    @pytest.mark.asyncio
+    async def test_primeiro_clique_ambos(self, ambiente_menu):
+        conv = gerenciador.iniciar(1, Acao.EDITAR, rascunho=Comunidade("Delphi", [Link("Site", "https://a")]))
+        conv.estado = EstadoConversa.EDITAR_ESCOLHA
+        estado = await menu.editar_escolha(FakeUpdate("edit_ambos"), FakeContext())
+        assert estado is EstadoConversa.EDITAR_NOVO_NOME
+
+    @pytest.mark.asyncio
+    async def test_voltar_do_menu_links_preserva_rascunho(self, ambiente_menu):
+        conv = gerenciador.iniciar(
+            1, Acao.EDITAR, rascunho=Comunidade("Delphi", [Link("Telegram", "https://t.me/x")])
+        )
+        conv.estado = EstadoConversa.EDITAR_LINKS
+        conv.link_tipo = "Instagram"
+        update = FakeUpdate("edit_lk_voltar")
+        estado = await menu.editar_link_voltar_escolha(update, FakeContext())
+        assert estado is EstadoConversa.EDITAR_ESCOLHA
+        assert conv.link_tipo is None
+        assert [link.tipo for link in conv.rascunho.links] == ["Telegram"]
+        _, kwargs = update.callback_query.message.sent[-1]
+        assert _callbacks(kwargs["reply_markup"]) == ["edit_nome", "edit_links", "edit_ambos"]
