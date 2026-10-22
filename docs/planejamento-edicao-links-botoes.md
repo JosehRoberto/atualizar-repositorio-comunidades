@@ -4,8 +4,8 @@
 **Versão:** 1.1
 **Foco:** `bot/handlers/menu.py`, `bot/handlers/state_manager.py` (+ novo
 `bot/services/link_template.py`)
-**Status:** **implementado e validado** (330 testes; `py_compile` + import OK). Pendente **deploy**
-(`systemctl restart`) e **commit/tag** sob autorização (§12).
+**Status:** **implementado, validado e em produção** (330 testes; deploy efetivado; tag `v0.7.0`
+publicada).
 **Revisão de risco incorporada** (R1–R18; `prompts/prompt-revisao-risco-planejamento.md`).
 **Origem:** análise das sugestões (1) entrada por "handle" por tipo e (2) remover link específico.
 

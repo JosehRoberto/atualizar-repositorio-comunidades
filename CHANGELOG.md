@@ -23,6 +23,14 @@
 - **Planejamento:** `docs/planejamento-correcao-edit-escolha-link-voltar.md` (v1.1, riscos R1–R7).
 - **Arquivos:** `bot/handlers/menu.py`, `bot/tests/test_menu.py`.
 
+### Documentação (21/10/2026) — Consistência pós-`v0.7.1`
+
+- **Alterado:** `prompts/nova-conversa.md` — versão atual (`v0.7.1`) e lista de tags publicadas.
+- **Alterado:** status dos planejamentos `planejamento-guarda-publicacao-pendente.md`,
+  `planejamento-editar-lista-botoes.md`, `planejamento-edicao-links-botoes.md` e
+  `planejamento-correcao-edit-escolha-link-voltar.md` → "implementado, validado e em produção".
+- **Arquivos:** `prompts/nova-conversa.md`, `docs/planejamento-*.md`.
+
 ### v0.7.0 (21/10/2026) — Gerenciador de links por botões no `/editar`
 
 - **Adicionado:** menu **Links** no `/editar` com botões por link — **alterar valor**, **remover**

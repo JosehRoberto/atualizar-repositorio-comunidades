@@ -3,8 +3,8 @@
 **Data:** 21/10/2026
 **Versão:** 1.1
 **Foco:** `bot/handlers/menu.py` (fluxo de edição — escolha de campo + menu de links)
-**Status:** **implementado e validado** (337 testes; `py_compile` + import OK). Pendente **deploy**
-(`systemctl restart`) e **commit/tag** sob autorização (§12).
+**Status:** **implementado, validado e em produção** (337 testes; deploy efetivado; tag `v0.7.1`
+publicada).
 **Revisão de risco incorporada** (R1–R7; `prompts/prompt-revisao-risco-planejamento.md`).
 **Diagnóstico (§14.1):** **confirmado pelo usuário** (comportamento atual × esperado × divergência).
 

@@ -41,7 +41,7 @@ formatação Markdown existentes, com backup, preview, aprovação explícita e 
 | Repositório alvo (dados) | `https://gitlab.com/paralivre/comunidades-de-tecnologia-pa` (branch `master`) |
 | Clone local do alvo | `repositorio/` (repositório git aninhado, ignorado no git do projeto) |
 | Status atual | **MVP funcional — bot operacional** |
-| Versão | `v0.4.0` (tag anotada) |
+| Versão | `v0.7.1` (tag anotada) |
 | Python | Python 3.12 |
 | Biblioteca | `python-telegram-bot` 22.7 (v20+) |
 | Testes | **337** herméticos |
@@ -405,11 +405,11 @@ sudo systemctl enable --now atualizar-repositorio-bot.service
 
 ## 9. Próximos Passos
 
-1. ✅ **Unit systemd instalada e ativa** (instância única); `restart` efetivado — **`v0.4.0` em
-   produção** (menu nativo de comandos; §3). O commit **não** faz deploy: mudanças de código exigem
-   `restart`.
-2. ✅ **Releases publicadas:** tags anotadas `v0.2.0`, `v0.2.1`, `v0.3.0` e `v0.4.0` criadas e **já
-   publicadas** no `origin`.
+1. ✅ **Unit systemd instalada e ativa** (instância única); `restart` efetivado — **`v0.7.1` em
+   produção** (menu nativo, guarda de publicação, `/editar` por lista e gerenciador de links; §3). O
+   commit **não** faz deploy: mudanças de código exigem `restart`.
+2. ✅ **Releases publicadas:** tags anotadas `v0.2.0`, `v0.2.1`, `v0.3.0`, `v0.4.0`, `v0.6.0`,
+   `v0.7.0` e `v0.7.1` criadas e **já publicadas** no `origin` (a `v0.5.0` foi embutida na `v0.6.0`).
 3. ✅ **Busca fuzzy (§2.10):** `busca_service` (match exato → `difflib` com limiar `0,6`) + lista
    numerada de candidatos; desempate por URL em nomes homônimos; testes em **258**.
 4. 🔜 **Criação de novas seções (§2.6):** âncora + título `## <emoji> <Título>` + tabela + atualização

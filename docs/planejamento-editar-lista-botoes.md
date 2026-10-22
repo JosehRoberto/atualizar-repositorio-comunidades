@@ -3,8 +3,8 @@
 **Data:** 21/10/2026
 **Versão:** 1.1
 **Foco:** `bot/handlers/menu.py` (+ 1 estado em `bot/handlers/state_manager.py`)
-**Status:** **implementado e validado** (305 testes; `py_compile` + import OK). Pendente **deploy**
-(`systemctl restart`) e **commit/tag** sob autorização (§12).
+**Status:** **implementado, validado e em produção** (305 testes; deploy efetivado; tag `v0.6.0`
+publicada).
 **Revisão de risco incorporada** (R1–R16; `prompts/prompt-revisao-risco-planejamento.md`).
 
 ---

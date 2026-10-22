@@ -4,8 +4,8 @@
 **Versão:** 1.1
 **Foco:** `bot/handlers/menu.py`, `bot/handlers/publicacao.py`, `bot/services/git_service.py`,
 `bot/services/escrita_service.py`
-**Status:** **implementado e validado** (290 testes; `py_compile` + import OK). Pendente **deploy**
-(`systemctl restart`) e **commit/tag** sob autorização (§12).
+**Status:** **implementado, validado e em produção** (290 testes; deploy efetivado; incluído na tag
+`v0.6.0`, que também abrange a `v0.5.0`).
 **Revisão de risco incorporada** (R1–R11; `prompts/prompt-revisao-risco-planejamento.md`).
 **Origem:** análise do diagnóstico "bloqueio encadeado (deadlock) por árvore suja" (Opção B).
 
